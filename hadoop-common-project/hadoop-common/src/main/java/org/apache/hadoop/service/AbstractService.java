@@ -149,6 +149,7 @@ public abstract class AbstractService implements Service {
    */
   @Override
   public void init(Configuration conf) {
+    LOG.info("@huanke step3 init(conf)");
     if (conf == null) {
       throw new ServiceStateException("Cannot initialize service "
                                       + getName() + ": null configuration");
@@ -161,6 +162,7 @@ public abstract class AbstractService implements Service {
         setConfig(conf);
         try {
           serviceInit(config);
+          LOG.info("@huanke step4 serviceInit(conf) in AbstractService");
           if (isInState(STATE.INITED)) {
             //if the service ended up here during init,
             //notify the listeners

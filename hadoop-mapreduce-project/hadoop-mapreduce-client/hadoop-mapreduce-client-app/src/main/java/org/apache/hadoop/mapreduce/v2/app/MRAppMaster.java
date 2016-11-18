@@ -231,6 +231,7 @@ public class MRAppMaster extends CompositeService {
 
   @Override
   protected void serviceInit(final Configuration conf) throws Exception {
+    LOG.info("@huanke step5 serviceInit(conf) in MRAppMaster");
     conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
 
     initJobCredentialsAndUGI(conf);
@@ -417,6 +418,7 @@ public class MRAppMaster extends CompositeService {
       // component creates a JobHistoryEvent in the meanwhile, it will be just be
       // queued inside the JobHistoryEventHandler 
       addIfService(historyService);
+      LOG.info("@huanke step6 serviceInit(  containerAllocator and containerLauncher)");
     }
     
     super.serviceInit(conf);
@@ -777,6 +779,7 @@ public class MRAppMaster extends CompositeService {
 
     @Override
     protected void serviceStart() throws Exception {
+      LOG.info("@huanke step7 serviceStart() in MRAPPMaster");
       if (job.isUber()) {
         this.containerAllocator = new LocalContainerAllocator(
             this.clientService, this.context, nmHost, nmPort, nmHttpPort
@@ -784,9 +787,12 @@ public class MRAppMaster extends CompositeService {
       } else {
         this.containerAllocator = new RMContainerAllocator(
             this.clientService, this.context);
+        LOG.info("@huanke step8 new RMContainerAllocator");
       }
       ((Service)this.containerAllocator).init(getConfig());
+      LOG.info("@huanke step9 RMContainerAllocator.init()");
       ((Service)this.containerAllocator).start();
+      LOG.info("@huanke step10 RMContainerAllocator.start()");
       super.serviceStart();
     }
 
@@ -1307,6 +1313,7 @@ public class MRAppMaster extends CompositeService {
               Integer.parseInt(nodePortString),
               Integer.parseInt(nodeHttpPortString), appSubmitTime,
               Integer.parseInt(maxAppAttempts));
+      LOG.info("@huanke step1 new MRAppMaster()");
       ShutdownHookManager.get().addShutdownHook(
         new MRAppMasterShutdownHook(appMaster), SHUTDOWN_HOOK_PRIORITY);
       JobConf conf = new JobConf(new YarnConfiguration());
@@ -1321,6 +1328,7 @@ public class MRAppMaster extends CompositeService {
       // set job classloader if configured
       MRApps.setJobClassLoader(conf);
       initAndStartAppMaster(appMaster, conf, jobUserName);
+      LOG.info("@huanke step2 initAndStartAppMaster()");
     } catch (Throwable t) {
       LOG.fatal("Error starting MRAppMaster", t);
       System.exit(1);
