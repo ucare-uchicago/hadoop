@@ -752,7 +752,7 @@ public class Client {
       if (curRetries >= maxRetries) {
         throw ioe;
       }
-      LOG.info("Retrying connect to server: " + server + ". Already tried "
+      LOG.info("Connection Timeout. Retrying connect to server: " + server + ". Already tried "
           + curRetries + " time(s); maxRetries=" + maxRetries);
     }
 
@@ -780,7 +780,7 @@ public class Client {
         throw (IOException)new InterruptedIOException("Interrupted: action="
             + action + ", retry policy=" + connectionRetryPolicy).initCause(e);
       }
-      LOG.info("Retrying connect to server: " + server + ". Already tried "
+      LOG.info("Connection Failure. Retrying connect to server: " + server + ". Already tried "
           + curRetries + " time(s); retry policy is " + connectionRetryPolicy);
     }
 

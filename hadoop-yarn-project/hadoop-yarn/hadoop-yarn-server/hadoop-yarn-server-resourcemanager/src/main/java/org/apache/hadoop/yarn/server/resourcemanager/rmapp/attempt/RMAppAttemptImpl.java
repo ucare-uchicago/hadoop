@@ -853,6 +853,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       // Tell the AMS. Unregister from the ApplicationMasterService
       appAttempt.masterService.unregisterAttempt(appAttemptId);
 
+
       // Tell the application and the scheduler
       ApplicationId applicationId = appAttemptId.getApplicationId();
       RMAppEvent appEvent = null;
@@ -1040,11 +1041,13 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
       // Unregister from the ClientToAMTokenSecretManager
       if (UserGroupInformation.isSecurityEnabled()) {
+        LOG.info("@huanke UserGroupInformation");
         appAttempt.rmContext.getClientToAMTokenSecretManager()
           .unRegisterApplication(appAttempt.getAppAttemptId());
       }
 
       if(!appAttempt.submissionContext.getUnmanagedAM()) {
+        LOG.info("@huanke Tell the launcher to cleanup");
         // Tell the launcher to cleanup.
         appAttempt.eventHandler.handle(new AMLauncherEvent(
             AMLauncherEventType.CLEANUP, appAttempt));
@@ -1131,10 +1134,12 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       if (appAttempt.getSubmissionContext().getUnmanagedAM()) {
         // Unmanaged AMs have no container to wait for, so they skip
         // the FINISHING state and go straight to FINISHED.
+        LOG.info("@huankeT getUnmanagedAM ---");
         new FinalTransition(RMAppAttemptState.FINISHED).transition(
             appAttempt, event);
         return RMAppAttemptState.FINISHED;
       }
+      LOG.info("@huankeT no unmanaged ---");
       appAttempt.rmContext.getAMFinishingMonitor().register(appAttemptId);
       ApplicationId applicationId =
           appAttempt.getAppAttemptId().getApplicationId();

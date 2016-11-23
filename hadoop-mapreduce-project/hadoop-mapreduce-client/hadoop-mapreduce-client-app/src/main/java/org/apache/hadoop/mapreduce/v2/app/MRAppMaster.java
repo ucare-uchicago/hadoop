@@ -966,7 +966,7 @@ public class MRAppMaster extends CompositeService {
 
     amInfos = new LinkedList<AMInfo>();
     completedTasksFromPreviousRun = new HashMap<TaskId, TaskInfo>();
-    processRecovery();
+//    processRecovery(); //huanke remove it first to check whether the 2nd application  attemd will work sucessfully.
 
     // Current an AMInfo for the current AM generation.
     AMInfo amInfo =
@@ -1045,11 +1045,12 @@ public class MRAppMaster extends CompositeService {
     int numReduceTasks = getConfig().getInt(MRJobConfig.NUM_REDUCES, 0);
     boolean shuffleKeyValidForRecovery = (numReduceTasks > 0 &&
         TokenCache.getShuffleSecretKey(jobCredentials) != null);
+//    boolean recoveryEnabled=false; //huanke , this is added by huanke
 
     if (recoveryEnabled && recoverySupportedByCommitter
           && shuffleKeyValidForRecovery) {
-      LOG.info("Recovery is enabled. "
-          + "Will try to recover from previous life on best effort basis.");
+      LOG.info("HKRecovery is enabled. "
+          + recoveryEnabled+ "Will try to recover from previous life on best effort basis.");
       try {
         parsePreviousJobHistory();
       } catch (IOException e) {
