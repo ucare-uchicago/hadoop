@@ -135,6 +135,10 @@ public class CapacitySchedulerConfiguration extends Configuration {
   @Private 
   public static final int DEFAULT_NODE_LOCALITY_DELAY = -1;
 
+  //huanke add my own boolean variables
+  public static boolean interceptHadoop=false;
+  public static boolean interceptBug=true;
+
   public CapacitySchedulerConfiguration() {
     this(new Configuration());
   }

@@ -62,8 +62,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSelector;
-import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.*;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
@@ -88,6 +87,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -98,6 +98,9 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.resource.Resources;
+//import org.apache.hadoop.yarn.server.resourcemanager.RMEventInterceptor;
+//import org.apache.hadoop.yarn.server.resourcemanager.InterceptEventType;
+//import org.apache.hadoop.yarn.server.resourcemanager.Role;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
@@ -1048,9 +1051,18 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
       if(!appAttempt.submissionContext.getUnmanagedAM()) {
         LOG.info("@huanke Tell the launcher to cleanup");
-        // Tell the launcher to cleanup.
-        appAttempt.eventHandler.handle(new AMLauncherEvent(
-            AMLauncherEventType.CLEANUP, appAttempt));
+//        //huanke
+        if (CapacitySchedulerConfiguration.interceptHadoop) {
+          RMEventInterceptor interceptor = new RMEventInterceptor(Role.RM, Role.NM, 1, RMInterceptEventType.AMCleanup);
+          interceptor.printString();
+          if (interceptor.getSAMCResponse()) {
+            LOG.info("@HK -> SAMC response to RMCommunicator to enbale AMCleanup");
+            appAttempt.eventHandler.handle(new AMLauncherEvent(
+                    AMLauncherEventType.CLEANUP, appAttempt));
+          }
+        } else {
+          appAttempt.eventHandler.handle(new AMLauncherEvent(AMLauncherEventType.CLEANUP, appAttempt));
+        }
       }
     }
   }
@@ -1134,7 +1146,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       if (appAttempt.getSubmissionContext().getUnmanagedAM()) {
         // Unmanaged AMs have no container to wait for, so they skip
         // the FINISHING state and go straight to FINISHED.
-        LOG.info("@huankeT getUnmanagedAM ---");
+        LOG.info("@huankeT not execute here ---");
         new FinalTransition(RMAppAttemptState.FINISHED).transition(
             appAttempt, event);
         return RMAppAttemptState.FINISHED;
@@ -1244,7 +1256,19 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   private void launchAttempt(){
     // Send event to launch the AM Container
-    eventHandler.handle(new AMLauncherEvent(AMLauncherEventType.LAUNCH, this));
+    //huanke
+    if(CapacitySchedulerConfiguration.interceptHadoop){
+      RMEventInterceptor interceptor1=new RMEventInterceptor(Role.RM, Role.NM,1, RMInterceptEventType.AMLauncheee);
+      interceptor1.printString();
+      if (interceptor1.getSAMCResponse()){
+        LOG.info("@HK -> SAMC response to RMCommunicator to enable AMLauncheee");
+        eventHandler.handle(new AMLauncherEvent(AMLauncherEventType.LAUNCH, this));
+      }else {
+        LOG.info("@HK -> SAMC response to RMCommunicator to disable AMLauncheee");
+      }
+    }else {
+      eventHandler.handle(new AMLauncherEvent(AMLauncherEventType.LAUNCH, this));
+    }
   }
   
   private void attemptLaunched() {

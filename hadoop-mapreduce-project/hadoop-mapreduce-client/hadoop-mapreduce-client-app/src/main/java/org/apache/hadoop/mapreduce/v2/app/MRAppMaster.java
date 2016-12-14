@@ -966,7 +966,7 @@ public class MRAppMaster extends CompositeService {
 
     amInfos = new LinkedList<AMInfo>();
     completedTasksFromPreviousRun = new HashMap<TaskId, TaskInfo>();
-//    processRecovery(); //huanke remove it first to check whether the 2nd application  attemd will work sucessfully.
+    processRecovery(); //huanke remove it first to check whether the 2nd application  attemd will work sucessfully.
 
     // Current an AMInfo for the current AM generation.
     AMInfo amInfo =

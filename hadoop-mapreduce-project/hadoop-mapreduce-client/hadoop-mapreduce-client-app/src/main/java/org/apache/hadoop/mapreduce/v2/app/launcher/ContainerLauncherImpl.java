@@ -39,6 +39,9 @@ import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.EventInterceptor;
+import org.apache.hadoop.mapreduce.v2.app.InterceptEventType;
+import org.apache.hadoop.mapreduce.v2.app.Role;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerLaunchedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
@@ -77,6 +80,9 @@ public class ContainerLauncherImpl extends AbstractService implements
       new LinkedBlockingQueue<ContainerLauncherEvent>();
   private final AtomicBoolean stopped;
   private ContainerManagementProtocolProxy cmProxy;
+  //huanke
+  public boolean interceptHadoop=false;
+  public boolean isInterceptBug=true;
 
   private Container getContainer(ContainerLauncherEvent event) {
     ContainerId id = event.getContainerID();
@@ -364,13 +370,33 @@ public class ContainerLauncherImpl extends AbstractService implements
       switch(event.getType()) {
 
       case CONTAINER_REMOTE_LAUNCH:
-        ContainerRemoteLaunchEvent launchEvent
-            = (ContainerRemoteLaunchEvent) event;
-        c.launch(launchEvent);
+        //huanke
+        if (interceptHadoop){
+          EventInterceptor interceptor1=new EventInterceptor(Role.AM, Role.NM,1, InterceptEventType.CONTAINER_REMOTE_LAUNCH);
+          interceptor1.printString();
+          if(interceptor1.getSAMCResponse()){
+            LOG.info("@HK -> SAMC response to RMCommunicator to enable CONTAINER_REMOTE_LAUNCH");
+          ContainerRemoteLaunchEvent launchEvent = (ContainerRemoteLaunchEvent) event;
+          c.launch(launchEvent);
+          }
+        }else{
+          ContainerRemoteLaunchEvent launchEvent = (ContainerRemoteLaunchEvent) event;
+          c.launch(launchEvent);
+        }
         break;
 
       case CONTAINER_REMOTE_CLEANUP:
-        c.kill();
+        //huanke
+        if (interceptHadoop) {
+          EventInterceptor interceptor2 = new EventInterceptor(Role.AM, Role.NM, 1, InterceptEventType.CONTAINER_REMOTE_CLEANUP);
+          interceptor2.printString();
+          if (interceptor2.getSAMCResponse()) {
+            LOG.info("@HK -> SAMC response to RMCommunicator to enable CONTAINER_REMOTE_CLEANUP");
+            c.kill();
+          }
+        }else{
+          c.kill();
+        }
         break;
       }
       removeContainerIfDone(containerID);

@@ -15,7 +15,7 @@ public class RMEventInterceptor {
     int sendNode;
     int recvNode;
     int nodeState; //1 represents alived and o represents crashed.
-    InterceptEventType interceptEventType;
+    RMInterceptEventType interceptEventType;
     int interceptEventTypeId;
     int eventId;
 
@@ -24,8 +24,7 @@ public class RMEventInterceptor {
 
     boolean samcResponse;
 
-    public RMEventInterceptor(Role roleS, Role roleR, int nodeState, InterceptEventType interceptEventType){
-        LOG.info("@HK I am testing1");
+    public RMEventInterceptor(Role roleS, Role roleR, int nodeState, RMInterceptEventType interceptEventType){
         this.sendNode=getRoleId(roleS);
         this.recvNode=getRoleId(roleR);
         this.nodeState=nodeState;
@@ -43,8 +42,8 @@ public class RMEventInterceptor {
             writer.print("sendNode="+this.sendNode+"\n");
             writer.print("recvNode="+this.recvNode+"\n");
             writer.print("nodeState="+this.nodeState+"\n");
-            writer.print("interceptEventType="+interceptEventTypeId+ "\n");
-            writer.print("type="+this.interceptEventType+ "\n");
+            writer.print("eventTypeId="+interceptEventTypeId+ "\n");
+            writer.print("eventType="+this.interceptEventType.toString()+ "\n");
             writer.print("eventId="+eventId);
             writer.close();
         }catch (IOException e){
@@ -65,7 +64,7 @@ public class RMEventInterceptor {
         return this.nodeId;
     }
 
-    public int getTypeId(InterceptEventType interceptEventType){
+    public int getTypeId(RMInterceptEventType interceptEventType){
         switch (interceptEventType){
             case AMLauncheee: this.nodeType=1;break;
             case AMCleanup:this.nodeType=2;break;
@@ -89,6 +88,19 @@ public class RMEventInterceptor {
         String ackFileName=fileDir+"/ack/"+filename;
         FileReader fileReader= null;
         BufferedReader inRead=null;
+        File ackFile=new File(ackFileName);
+
+        //step1 wait for ackFile in /tmp/ipc/ack/ackFile
+        while (!ackFile.exists()){
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        LOG.info("@HK Step1 -> wait for ack File "+ackFileName);
+
+        //step2 read the execute=true or false in ackFile
         try {
             fileReader = new FileReader(ackFileName);
             inRead = new BufferedReader(fileReader);
@@ -106,6 +118,15 @@ public class RMEventInterceptor {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+        LOG.info("@HK Step2 -> read ack File "+ackFileName);
+
+        //step3 remove the /tmp/ipc/ack/ackFile
+        try {
+            Runtime.getRuntime().exec("rm -r "+fileDir+"/ack/"+filename);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        LOG.info("@HK Step3 -> remove ack File "+ackFileName);
     }
 
     public String getFileDir(){

@@ -93,6 +93,19 @@ public class EventInterceptor {
         String ackFileName=fileDir+"/ack/"+filename;
         FileReader fileReader= null;
         BufferedReader inRead=null;
+        File ackFile=new File(ackFileName);
+
+        //step1 wait for ackFile in /tmp/ipc/ack/ackFile
+        while (!ackFile.exists()){
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        LOG.info("@HK Step1 -> wait for ack File "+ackFileName);
+
+        //step2 read the execute=true or false in ackFile
         try {
             fileReader = new FileReader(ackFileName);
             inRead = new BufferedReader(fileReader);
@@ -110,7 +123,18 @@ public class EventInterceptor {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+        LOG.info("@HK Step2 -> read ack File "+ackFileName);
+
+        //step3 remove the /tmp/ipc/ack/ackFile
+        try {
+            Runtime.getRuntime().exec("rm -r "+fileDir+"/ack/"+filename);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        LOG.info("@HK Step3 -> remove ack File "+ackFileName);
     }
+
+
 
     public String getFileDir(){
         String fileDir="/tmp/ipc";

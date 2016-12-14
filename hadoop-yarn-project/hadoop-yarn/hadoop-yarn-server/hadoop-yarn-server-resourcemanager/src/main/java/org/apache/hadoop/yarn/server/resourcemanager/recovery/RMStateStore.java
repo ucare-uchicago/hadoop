@@ -45,12 +45,16 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.RMEventInterceptor;
+import org.apache.hadoop.yarn.server.resourcemanager.RMInterceptEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.Role;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppStoredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStoredEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 
 @Private
 @Unstable
@@ -231,7 +235,17 @@ public abstract class RMStateStore {
     assert context instanceof ApplicationSubmissionContextPBImpl;
     ApplicationState appState = new ApplicationState(
         app.getSubmitTime(), context, app.getUser());
-    dispatcher.getEventHandler().handle(new RMStateStoreAppEvent(appState));
+    //huanke
+    if(CapacitySchedulerConfiguration.interceptBug){
+      RMEventInterceptor interceptor=new RMEventInterceptor(Role.RM, Role.RM, 1 , RMInterceptEventType.Store_StateStore);
+      interceptor.printString();
+      if (interceptor.getSAMCResponse()){
+        dispatcher.getEventHandler().handle(new RMStateStoreAppEvent(appState));
+      }
+    }else{
+      dispatcher.getEventHandler().handle(new RMStateStoreAppEvent(appState));
+    }
+
   }
     
   /**
@@ -366,7 +380,15 @@ public abstract class RMStateStore {
    * Non-Blocking API
    */
   public synchronized void removeApplication(ApplicationState appState) {
-    dispatcher.getEventHandler().handle(new RMStateStoreRemoveAppEvent(appState));
+    //huanke
+    if(CapacitySchedulerConfiguration.interceptBug){
+      RMEventInterceptor eventInterceptor=new RMEventInterceptor(Role.RM, Role.RM, 1, RMInterceptEventType.Remove_StateStore);
+      eventInterceptor.printString();
+      if (eventInterceptor.getSAMCResponse()){
+        dispatcher.getEventHandler().handle(new RMStateStoreRemoveAppEvent(appState));}
+    }else {
+      dispatcher.getEventHandler().handle(new RMStateStoreRemoveAppEvent(appState));
+    }
   }
 
   /**

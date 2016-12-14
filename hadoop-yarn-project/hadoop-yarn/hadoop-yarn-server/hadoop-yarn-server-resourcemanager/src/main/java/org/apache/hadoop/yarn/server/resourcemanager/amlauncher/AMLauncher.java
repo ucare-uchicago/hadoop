@@ -62,7 +62,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
-
 /**
  * The launch of the AM itself.
  */
@@ -114,6 +113,7 @@ public class AMLauncher implements Runnable {
     list.add(scRequest);
     StartContainersRequest allRequests =
         StartContainersRequest.newInstance(list);
+
 
     StartContainersResponse response =
         containerMgrProxy.startContainers(allRequests);

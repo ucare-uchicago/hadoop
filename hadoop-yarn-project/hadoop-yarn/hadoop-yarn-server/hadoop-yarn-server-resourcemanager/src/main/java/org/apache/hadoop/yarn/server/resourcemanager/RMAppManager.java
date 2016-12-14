@@ -54,8 +54,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType.APP_COMPLETED;
-
 /**
  * This class manages the list of applications for the resource manager. 
  */
@@ -426,48 +424,22 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     switch(event.getType()) {
       case APP_COMPLETED: 
       {
-        LOG.info("@huankeT Here is before the Remove_APP event -> RMAppManager.finishApplication(Id)  ");
-        String line =null;
-        String flag1=null;
-//        String flag2=null;
-        FileReader fileReader = null;
-        try {
-          fileReader = new FileReader("isStop.txt");
-          BufferedReader bufferedReader = new BufferedReader(fileReader);
-          while((line = bufferedReader.readLine()) != null) {
-            LOG.info("@huanke fileContent1 "+line);
-            flag1=line;
-            LOG.info("@huanke flag1 "+line);
-//            if (line.equals("true")){
-//              Runtime.getRuntime().exec("rm isStop.txt");
-//              Runtime.getRuntime().exec("echo false >> isStop.txt");
-//            }
-            break;
-          }
-          bufferedReader.close();
-        } catch (FileNotFoundException e) {
-          e.printStackTrace();
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-
-        if(flag1.equals("true")){
-          LOG.info("@huanke Stop trueresourceManager ");
-          stopResourceManager(); //huanke
-          System.exit(0);
-          LOG.info("@huankeT Not here forever  ");
-        }
-//
+//        LOG.info("@huankeT Here is before the Remove_APP event -> RMAppManager.finishApplication(Id)  ");
+//        String line =null;
+//        String flag1=null;
+////        String flag2=null;
+//        FileReader fileReader = null;
 //        try {
 //          fileReader = new FileReader("isStop.txt");
 //          BufferedReader bufferedReader = new BufferedReader(fileReader);
 //          while((line = bufferedReader.readLine()) != null) {
-//            LOG.info("@huanke fileContent2 "+line);
-//            flag2.equals(line);
-//            LOG.info("@huanke flag2 "+line);
-//            if (line.equals("false")){
-//              Runtime.getRuntime().exec("rm isStop.txt");
-//            }
+//            LOG.info("@huanke fileContent1 "+line);
+//            flag1=line;
+//            LOG.info("@huanke flag1 "+line);
+////            if (line.equals("true")){
+////              Runtime.getRuntime().exec("rm isStop.txt");
+////              Runtime.getRuntime().exec("echo false >> isStop.txt");
+////            }
 //            break;
 //          }
 //          bufferedReader.close();
@@ -476,13 +448,13 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 //        } catch (IOException e) {
 //          e.printStackTrace();
 //        }
-//        if(flag2.equals("false")){
+//
+//        if(flag1.equals("true")){
 //          LOG.info("@huanke Stop trueresourceManager ");
-//          startResourceManager(); //huanke
+//          stopResourceManager(); //huanke
 //          System.exit(0);
 //          LOG.info("@huankeT Not here forever  ");
 //        }
-
         finishApplication(applicationId);
         ApplicationSummary.logAppSummary(
             rmContext.getRMApps().get(applicationId));

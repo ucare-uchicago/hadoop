@@ -162,7 +162,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     LogFactory.getLog(Configuration.class);
 
   private boolean quietmode = true;
-  
+
   private static class Resource {
     private final Object resource;
     private final String name;

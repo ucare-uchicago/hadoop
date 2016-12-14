@@ -62,8 +62,13 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+//
+//import org.apache.hadoop.yarn.server.nodemanager.EventInterceptor;
+//import org.apache.hadoop.yarn.server.nodemanager.Role;
+//import org.apache.hadoop.yarn.server.nodemanager.InterceptEventType;
 
 import com.google.common.annotations.VisibleForTesting;
+
 
 public class NodeStatusUpdaterImpl extends AbstractService implements
     NodeStatusUpdater {
@@ -368,6 +373,16 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             request
               .setLastKnownNMTokenMasterKey(NodeStatusUpdaterImpl.this.context
                 .getNMTokenSecretManager().getCurrentKey());
+//
+//            EventInterceptor interceptor=new EventInterceptor(Role.NM, Role.RM,1,InterceptEventType.NodeStatusUpdate);
+//            interceptor.printString();
+//            if(interceptor.getSAMCResponse()){
+//              LOG.info("@HK I am in NodeStatusUpdaterImpl  1 ");
+//            }else{
+//              LOG.info("@HK I am in NodeStatusUpdaterImpl  2");
+//            }
+
+
             response = resourceTracker.nodeHeartbeat(request);
             //get next heartbeat interval from response
             nextHeartBeatInterval = response.getNextHeartBeatInterval();

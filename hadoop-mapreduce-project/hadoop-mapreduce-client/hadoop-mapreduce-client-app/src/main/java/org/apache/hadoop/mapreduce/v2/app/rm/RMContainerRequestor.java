@@ -35,6 +35,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.EventInterceptor;
+import org.apache.hadoop.mapreduce.v2.app.InterceptEventType;
+import org.apache.hadoop.mapreduce.v2.app.Role;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -151,6 +154,9 @@ public abstract class RMContainerRequestor extends RMCommunicator {
           new ArrayList<ContainerId>(release), null);
     AllocateResponse allocateResponse;
     try {
+      //huanke
+//      EventInterceptor interceptor=new EventInterceptor(Role.AM, Role.RM,1, InterceptEventType.AllocateContainer);
+//      interceptor.printString();
       allocateResponse = scheduler.allocate(allocateRequest);
     } catch (YarnException e) {
       throw new IOException(e);

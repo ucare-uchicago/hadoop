@@ -53,6 +53,10 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.mapreduce.v2.app.EventInterceptor;
+import org.apache.hadoop.mapreduce.v2.app.InterceptEventType;
+import org.apache.hadoop.mapreduce.v2.app.Role;
+
 
 /**
  * Registers/unregisters to RM and sends heartbeats to RM.
@@ -82,6 +86,10 @@ public abstract class RMCommunicator extends AbstractService
   // Has a signal (SIGTERM etc) been issued?
   protected volatile boolean isSignalled = false;
   private volatile boolean shouldUnregister = true;
+
+  //huanke
+  public boolean interceptHadoop=false;
+  public boolean isInterceptBug=true;
 
   public RMCommunicator(ClientService clientService, AppContext context) {
     super("RMCommunicator");
@@ -144,15 +152,34 @@ public abstract class RMCommunicator extends AbstractService
         request.setRpcPort(serviceAddr.getPort());
         request.setTrackingUrl(serviceAddr.getHostName() + ":" + clientService.getHttpPort());
       }
-      RegisterApplicationMasterResponse response =
-        scheduler.registerApplicationMaster(request);
-      maxContainerCapability = response.getMaximumResourceCapability();
-      this.context.getClusterInfo().setMaxContainerCapability(
-          maxContainerCapability);
-      if (UserGroupInformation.isSecurityEnabled()) {
-        setClientToAMToken(response.getClientToAMTokenMasterKey());        
+      //huanke
+      if(interceptHadoop){
+        EventInterceptor interceptor=new EventInterceptor(Role.AM, Role.RM,1, InterceptEventType.AMRegister);
+        interceptor.printString();
+        if(interceptor.getSAMCResponse()){
+          LOG.info("@HK -> SAMC response to RMCommunicator to enable RegisterApplicationMaster");
+          RegisterApplicationMasterResponse response =
+            scheduler.registerApplicationMaster(request);
+          maxContainerCapability = response.getMaximumResourceCapability();
+          this.context.getClusterInfo().setMaxContainerCapability(
+              maxContainerCapability);
+          if (UserGroupInformation.isSecurityEnabled()) {
+            setClientToAMToken(response.getClientToAMTokenMasterKey());
+          }
+          this.applicationACLs = response.getApplicationACLs();
+        }
+      }else{
+        LOG.info("@HK -> RMCommunicator without interceptHadoop");
+        RegisterApplicationMasterResponse response =
+                scheduler.registerApplicationMaster(request);
+        maxContainerCapability = response.getMaximumResourceCapability();
+        this.context.getClusterInfo().setMaxContainerCapability(
+                maxContainerCapability);
+        if (UserGroupInformation.isSecurityEnabled()) {
+          setClientToAMToken(response.getClientToAMTokenMasterKey());
+        }
+        this.applicationACLs = response.getApplicationACLs();
       }
-      this.applicationACLs = response.getApplicationACLs();
       LOG.info("maxContainerCapability: " + maxContainerCapability.getMemory());
     } catch (Exception are) {
       LOG.error("Exception while registering", are);
@@ -191,7 +218,17 @@ public abstract class RMCommunicator extends AbstractService
       FinishApplicationMasterRequest request =
           FinishApplicationMasterRequest.newInstance(finishState,
             sb.toString(), historyUrl);
-      scheduler.finishApplicationMaster(request);
+      //huanke
+      if(interceptHadoop){
+        EventInterceptor interceptor=new EventInterceptor(Role.AM, Role.RM,1, InterceptEventType.AMUnRegister);
+        interceptor.printString();
+        if(interceptor.getSAMCResponse()){
+          scheduler.finishApplicationMaster(request);
+          LOG.info("@HK -> SAMC response to RMCommunicator to enable UnregisterApplicationMaster");
+        }
+      }else{
+        scheduler.finishApplicationMaster(request);
+      }
     } catch(Exception are) {
       LOG.error("Exception while unregistering ", are);
     }

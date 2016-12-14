@@ -46,6 +46,9 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.EventInterceptor;
+import org.apache.hadoop.mapreduce.v2.app.InterceptEventType;
+import org.apache.hadoop.mapreduce.v2.app.Role;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
@@ -216,9 +219,19 @@ public class RMContainerAllocator extends RMContainerRequestor
   @Override
   protected synchronized void heartbeat() throws Exception {
     scheduleStats.updateAndLogIfChanged("Before Scheduling: ");
-    List<Container> allocatedContainers = getResources();
+    List<Container> allocatedContainers = getResources(); //it will tirgger RMContainerRequestor to ask for containers from RM
     if (allocatedContainers.size() > 0) {
-      scheduledRequests.assign(allocatedContainers);
+      //huanke
+      if(interceptHadoop){
+        EventInterceptor interceptor=new EventInterceptor(Role.AM, Role.RM,1, InterceptEventType.HeartbeatWith);
+        interceptor.printString();
+        if (interceptor.getSAMCResponse()){
+          LOG.info("@HK -> SAMC response to RMCommunicator to enable HeartbeatWith");
+          scheduledRequests.assign(allocatedContainers);
+        }
+      }else{
+          scheduledRequests.assign(allocatedContainers);
+        }
     }
 
     int completedMaps = getJob().getCompletedMaps();
