@@ -759,6 +759,7 @@ public class NNThroughputBenchmark {
     ArrayList<Block> blocks;
     int nrBlocks; // actual number of blocks
     long[] blockReportList;
+    int capacity = 10;
 
     /**
      * Get data-node in the form 
@@ -778,6 +779,7 @@ public class NNThroughputBenchmark {
     TinyDatanode(int dnIdx, int blockCapacity) throws IOException {
       dnRegistration = new DatanodeRegistration(getNodeName(dnIdx));
       this.blocks = new ArrayList<Block>(blockCapacity);
+      this.capacity = blockCapacity;
       this.nrBlocks = 0;
     }
 
@@ -813,19 +815,21 @@ public class NNThroughputBenchmark {
     }
 
     boolean addBlock(Block blk) {
-      if(nrBlocks == blocks.size()) {
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("Cannot add block: datanode capacity = " + blocks.size());
-        }
+      if(nrBlocks >= this.capacity) {
+        //if(LOG.isDebugEnabled()) {
+          LOG.info("Cannot add block: datanode capacity = " + blocks.size());
+        //}
         return false;
       }
-      blocks.set(nrBlocks, blk);
+      blocks.add(blk);
       nrBlocks++;
+      LOG.info("nrBlocks = " + nrBlocks);
       return true;
     }
 
     void formBlockReport() {
       // fill remaining slots with blocks that do not exist
+      LOG.info("blocks.size="+blocks.size()+";nrBlocks="+nrBlocks);
       for(int idx = blocks.size()-1; idx >= nrBlocks; idx--)
         blocks.set(idx, new Block(blocks.size() - idx, 0, 0));
       blockReportList = new BlockListAsLongs(blocks,null).getBlockListAsLongs();
@@ -991,6 +995,7 @@ public class NNThroughputBenchmark {
         prevBlock = loc.getBlock();
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
+          LOG.info("Placing block "+dnInfo+" to datanode "+dnIdx);
           datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
           nameNode.blockReceived(
               datanodes[dnIdx].dnRegistration, 

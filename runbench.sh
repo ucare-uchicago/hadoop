@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# hadoop-2.7.1
+#java -cp "/proj/ucare/git/hadoop-ucare/psbin/ucare_se_conf/hadoop-etc/hadoop-2.7.1:/proj/ucare/riza/hadoop-2.7.1.faread/share/hadoop/common/lib/*:/proj/ucare/riza/hadoop-2.7.1.faread/share/hadoop/common/*:/proj/ucare/riza/hadoop-2.7.1.faread/share/hadoop/hdfs:/proj/ucare/riza/hadoop-2.7.1.faread/share/hadoop/hdfs/lib/*:/proj/ucare/riza/hadoop-2.7.1.faread/share/hadoop/hdfs/*:/proj/ucare/riza/hadoop-2.7.1.faread/share/hadoop/yarn/lib/*:/proj/ucare/riza/hadoop-2.7.1.faread/share/hadoop/yarn/*:/proj/ucare/riza/hadoop-2.7.1.faread/share/hadoop/mapreduce/lib/*:/proj/ucare/riza/hadoop-2.7.1.faread/share/hadoop/mapreduce/*:/usr/lib/jvm/java-7-openjdk-amd64lib/tools.jar:/proj/ucare/riza/hadoop-2.7.1.faread/contrib/capacity-scheduler/*.jar" org.apache.hadoop.hdfs.server.namenode.NNThroughputBenchmark
+
+
+# hadoop-0.22
+ROOT=`pwd`
+HPATH="$ROOT/hadoop-project-dist/target/hadoop-0.24.0-SNAPSHOT"
+CLASSPATH="/proj/ucare/git/hadoop-ucare/psbin/ucare_se_conf/hadoop-etc/hadoop-2.7.1:$HPATH/share/hadoop/common/lib/*:$HPATH/share/hadoop/common/*:$HPATH/share/hadoop/hdfs:$HPATH/share/hadoop/hdfs/lib/*:$HPATH/share/hadoop/hdfs/*:$HPATH/share/hadoop/yarn/lib/*:$HPATH/share/hadoop/yarn/*:$HPATH/share/hadoop/mapreduce/lib/*:$HPATH/share/hadoop/mapreduce/*:/usr/lib/jvm/java-7-openjdk-amd64lib/tools.jar"
+
+#java -cp $CLASSPATH -Dproc_namenode -Xmx1000m -Djava.net.preferIPv4Stack=true -Dhadoop.log.dir=/tmp/hadoop-ucare/logs/hadoop -Dhadoop.log.file=hadoop.log -Dhadoop.id.str=riza -Dhadoop.root.logger=INFO,console org.apache.hadoop.hdfs.server.namenode.NameNode -format
+ 
+java -cp $CLASSPATH -Djava.net.preferIPv4Stack=true org.apache.hadoop.hdfs.server.namenode.NNThroughputBenchmark -op blockReport -datanodes 5 -reports 100 -blocksPerReport 1000 -blocksPerFile 10
