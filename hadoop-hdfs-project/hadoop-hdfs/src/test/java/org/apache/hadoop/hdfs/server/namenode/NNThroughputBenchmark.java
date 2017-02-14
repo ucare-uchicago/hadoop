@@ -219,12 +219,13 @@ public class NNThroughputBenchmark {
     void benchmark() throws IOException {
       daemons = new ArrayList<StatsDaemon>();
       long start = 0;
+      int curNumThread = 1;
       try {
         numOpsExecuted = 0;
         cumulativeTime = 0;
         if(numThreads < 1)
           return;
-        int tIdx = 0; // thread index < nrThreads
+        int tIdx = 0, nIdx = 0; // thread index < nrThreads
         int opsPerThread[] = new int[numThreads];
         for(int opsScheduled = 0; opsScheduled < numOpsRequired; 
                                   opsScheduled += opsPerThread[tIdx++]) {
@@ -236,23 +237,43 @@ public class NNThroughputBenchmark {
         // if numThreads > numOpsRequired then the remaining threads will do nothing
         for(; tIdx < numThreads; tIdx++)
           opsPerThread[tIdx] = 0;
+        setNameNodeLoggingLevel(Level.WARN);
         generateInputs(opsPerThread);
-        setNameNodeLoggingLevel(logLevel);
-        for(tIdx=0; tIdx < numThreads; tIdx++)
-          daemons.add(new StatsDaemon(tIdx, opsPerThread[tIdx], this));
-        start = System.currentTimeMillis();
-        LOG.info("Starting " + numOpsRequired + " " + getOpName() + "(s).");
-        for(StatsDaemon d : daemons)
-          d.start();
-      } finally {
-        while(isInPorgress()) {
-          // try {Thread.sleep(500);} catch (InterruptedException e) {}
+	setNameNodeLoggingLevel(logLevel);
+
+        while (curNumThread <= numThreads) {
+        numOpsExecuted = 0;
+        cumulativeTime = 0;
+        
+        try {
+          daemons.clear();
+          for(tIdx=0; tIdx < curNumThread; tIdx++)
+            daemons.add(new StatsDaemon(tIdx, opsPerThread[tIdx], this));
+
+          start = System.currentTimeMillis();
+          LOG.info("Starting " + numOpsRequired + " " + getOpName() + "(s).");
+          for(nIdx=0; nIdx < curNumThread; nIdx++)
+            daemons.get(nIdx).start();
+
+        } finally {
+          while(isInPorgress()) {
+            // try {Thread.sleep(500);} catch (InterruptedException e) {}
+          }
+          elapsedTime = System.currentTimeMillis() - start;
+          for(nIdx=0; nIdx < curNumThread; nIdx++) {
+            StatsDaemon d = daemons.get(nIdx);
+            incrementStats(d.localNumOpsExecuted, d.localCumulativeTime);
+            // System.out.println(d.toString() + ": ops Exec = " + d.localNumOpsExecuted);
+          }
+          LOG.info("--- " + curNumThread + " datanodes  ---");
+          this.printStats();
         }
-        elapsedTime = System.currentTimeMillis() - start;
-        for(StatsDaemon d : daemons) {
-          incrementStats(d.localNumOpsExecuted, d.localCumulativeTime);
-          // System.out.println(d.toString() + ": ops Exec = " + d.localNumOpsExecuted);
+
+        curNumThread = curNumThread * 2;
         }
+
+      } finally {  
+          LOG.info("Everything done!");
       }
     }
 
@@ -816,9 +837,9 @@ public class NNThroughputBenchmark {
 
     boolean addBlock(Block blk) {
       if(nrBlocks >= this.capacity) {
-        //if(LOG.isDebugEnabled()) {
-          LOG.info("Cannot add block: datanode capacity = " + blocks.size());
-        //}
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Cannot add block: datanode capacity = " + blocks.size());
+        }
         return false;
       }
       blocks.add(blk);
@@ -829,7 +850,7 @@ public class NNThroughputBenchmark {
 
     void formBlockReport() {
       // fill remaining slots with blocks that do not exist
-      LOG.info("blocks.size="+blocks.size()+";nrBlocks="+nrBlocks);
+      // LOG.info("blocks.size="+blocks.size()+";nrBlocks="+nrBlocks);
       for(int idx = blocks.size()-1; idx >= nrBlocks; idx--)
         blocks.set(idx, new Block(blocks.size() - idx, 0, 0));
       blockReportList = new BlockListAsLongs(blocks,null).getBlockListAsLongs();
@@ -995,7 +1016,7 @@ public class NNThroughputBenchmark {
         prevBlock = loc.getBlock();
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
-          LOG.info("Placing block "+dnInfo+" to datanode "+dnIdx);
+          //LOG.info("Placing block "+dnInfo+" to datanode "+dnIdx);
           datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
           nameNode.blockReceived(
               datanodes[dnIdx].dnRegistration, 
