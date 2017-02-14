@@ -28,7 +28,7 @@
   <!-- ====================================================== -->
   <target name="compile">
     <subant target="compile">
-      <fileset dir="." includes="*/build.xml"/>
+      <fileset dir="." includes="*/build.xml" excludes="hive/build.xml"/>
     </subant>
   </target>
   
