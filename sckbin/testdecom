@@ -1,0 +1,14 @@
+#!/bin/sh
+
+cd ..
+alljars=""
+for jar in `ls lib/*.jar`; do
+  alljars="$alljars:$jar"
+done
+for jar in `ls lib/jetty-ext/*.jar`; do
+  alljars="$alljars:$jar"
+done
+for jar in `ls build/*.jar`; do
+  alljars="$alljars:$jar"
+done
+java -cp $alljars junit.textui.TestRunner org.apache.hadoop.hdfs.TestDecommission
