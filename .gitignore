@@ -2,3 +2,10 @@
 .externalToolBuilders/
 .project
 .settings/
+build/
+conf/hadoop-env.sh
+conf/hadoop-site.xml
+conf/mapred-default.xml
+conf/masters
+conf/slaves
+src/contrib/ec2/bin/hadoop-ec2-env.sh
