@@ -11,4 +11,4 @@ done
 for jar in `ls build/*.jar`; do
   alljars="$alljars:$jar"
 done
-java -cp $alljars junit.textui.TestRunner org.apache.hadoop.hdfs.TestDecommission
+java -cp $alljars junit.textui.TestRunner org.apache.hadoop.hdfs.TestDecommissionScale
