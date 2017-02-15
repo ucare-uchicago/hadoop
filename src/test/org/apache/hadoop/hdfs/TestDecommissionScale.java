@@ -97,7 +97,7 @@ public class TestDecommissionScale extends TestCase {
     BlockLocation[] locations = fileSys.getFileBlockLocations(
         fileSys.getFileStatus(name), 0, fileSize);
     for (int idx = 0; idx < locations.length; idx++) {
-      String[] loc = locations[idx].getHosts();
+      String[] loc = locations[idx].getNames();
       System.out.print("Block[" + idx + "] : ");
       for (int j = 0; j < loc.length; j++) {
         System.out.print(loc[j] + " ");
