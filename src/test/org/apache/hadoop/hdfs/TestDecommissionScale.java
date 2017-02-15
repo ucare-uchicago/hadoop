@@ -41,8 +41,9 @@ import org.apache.hadoop.fs.BlockLocation;
 public class TestDecommissionScale extends TestCase {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
-  static final int fileSize = 16384;
-  static final int numDatanodes = 6;
+  static final int fileSize = 100*blockSize;
+  static final int numDatanodes = 10;
+  static final int numToDecom = 2;
 
 
   Random myrand = new Random();
@@ -62,7 +63,6 @@ public class TestDecommissionScale extends TestCase {
     }
 
     FSDataOutputStream stm = fs.create(name);
-    
     if (nodes != null) {
       for (Iterator<String> it = nodes.iterator(); it.hasNext();) {
         String node = it.next();
@@ -75,7 +75,7 @@ public class TestDecommissionScale extends TestCase {
 
   private void writeFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
-    // create and write a file that contains three blocks of data
+    // create and write a file that contains (fileSize/blockSize) blocks of data
     FSDataOutputStream stm = fileSys.create(name, true, 
                                             fileSys.getConf().getInt("io.file.buffer.size", 4096),
                                             (short)repl, (long)blockSize);
@@ -189,6 +189,42 @@ public class TestDecommissionScale extends TestCase {
   }
 
   /*
+   * decommission multiple random node.
+   */
+  private ArrayList<String> decommissionNodes(NameNode namenode,
+                                  Configuration conf,
+                                  DFSClient client, 
+                                  FileSystem filesys,
+                                  FileSystem localFileSys,
+                                  int numDecom)
+    throws IOException {
+    DistributedFileSystem dfs = (DistributedFileSystem) filesys;
+    DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
+    ArrayList<String> toDecom = new ArrayList<String>();
+
+    for (int i=0; i<numDecom; i++) {
+      int index = 0;
+      boolean found = false;
+      while (!found) {
+        index = myrand.nextInt(info.length);
+        if (!info[index].isDecommissioned()) {
+          found = true;
+        }
+      }
+      String nodename = info[index].getName();
+      System.out.println("Decommissioning node: " + nodename);
+      toDecom.add(nodename);
+    }
+
+    // write nodename into the exclude file.
+    ArrayList<String> nodes = new ArrayList<String>(decommissionedNodes);
+    nodes.addAll(toDecom);
+    writeConfigFile(localFileSys, excludeFile, nodes);
+    namenode.namesystem.refreshNodes(conf);
+    return toDecom;
+  }
+
+  /*
    * put node back in action
    */
   private void commissionNode(FileSystem filesys, FileSystem localFileSys,
@@ -281,25 +317,24 @@ public class TestDecommissionScale extends TestCase {
     DistributedFileSystem dfs = (DistributedFileSystem) fileSys;
 
     try {
-      for (int iteration = 0; iteration < numDatanodes - 1; iteration++) {
-        int replicas = numDatanodes - iteration - 1;
-        //
-        // Decommission one node. Verify that node is decommissioned.
-        // 
-        Path file1 = new Path("decommission.dat");
-        writeFile(fileSys, file1, replicas);
-        System.out.println("Created file decommission.dat with " +
-                           replicas + " replicas.");
-        checkFile(fileSys, file1, replicas);
-        printFileLocations(fileSys, file1);
-        String downnode = decommissionNode(cluster.getNameNode(), conf,
-                                           client, fileSys, localFileSys);
-        decommissionedNodes.add(downnode);
+      int replicas = 3;
+      //
+      // Decommission one node. Verify that node is decommissioned.
+      // 
+      Path file1 = new Path("decommission.dat");
+      writeFile(fileSys, file1, replicas);
+      System.out.println("Created file decommission.dat with " +
+                         replicas + " replicas.");
+      checkFile(fileSys, file1, replicas);
+      printFileLocations(fileSys, file1);
+      ArrayList<String> downnodes = decommissionNodes(cluster.getNameNode(), conf,
+                                                   client, fileSys, localFileSys, numToDecom);
+      decommissionedNodes.addAll(downnodes);
+      for (String downnode: downnodes)
         waitNodeState(fileSys, downnode, NodeState.DECOMMISSIONED);
-        checkFile(fileSys, file1, replicas, downnode);
-        cleanupFile(fileSys, file1);
-        cleanupFile(localFileSys, dir);
-      }
+      //checkFile(fileSys, file1, replicas, downnode);
+      cleanupFile(fileSys, file1);
+      cleanupFile(localFileSys, dir);
     } catch (IOException e) {
       info = client.datanodeReport(DatanodeReportType.ALL);
       printDatanodeReport(info);
