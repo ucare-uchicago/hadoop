@@ -3757,11 +3757,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * heuristic to determine when a decommission is really over.
    */
   public synchronized void decommissionedDatanodeCheck() {
+    long startTime = System.currentTimeMillis();
     for (Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator();
          it.hasNext();) {
       DatanodeDescriptor node = it.next();  
       checkDecommissionStateInternal(node);
     }
+    long estimatedTime = System.currentTimeMillis() - startTime;
+    FSNamesystem.LOG.warn(estimatedTime+" ms spent on decommissionedDatanodeCheck");
   }
     
   /**

@@ -40,10 +40,10 @@ import org.apache.hadoop.fs.BlockLocation;
  */
 public class TestDecommissionScale extends TestCase {
   static final long seed = 0xDEADBEEFL;
-  static final int blockSize = 8192;
-  static final int fileSize = 100*blockSize;
+  static final int blockSize = 1024;
+  static final int fileSize = 10*blockSize;
   static final int numDatanodes = 10;
-  static final int numToDecom = 2;
+  static final int numToDecom = 7;
 
 
   Random myrand = new Random();
@@ -97,6 +97,7 @@ public class TestDecommissionScale extends TestCase {
     BlockLocation[] locations = fileSys.getFileBlockLocations(
         fileSys.getFileStatus(name), 0, fileSize);
     for (int idx = 0; idx < locations.length; idx++) {
+      if (idx > 10) continue;
       String[] loc = locations[idx].getNames();
       System.out.print("Block[" + idx + "] : ");
       for (int j = 0; j < loc.length; j++) {
@@ -154,6 +155,26 @@ public class TestDecommissionScale extends TestCase {
     }
   }
 
+
+  /*
+   * get list of living datanodes.
+   */
+  private ArrayList<String> getLivingNodes(NameNode namenode,
+                                  Configuration conf,
+                                  DFSClient client, 
+                                  FileSystem filesys,
+                                  FileSystem localFileSys)
+    throws IOException {
+    ArrayList<String> livingNodes = new ArrayList<String>();
+    DistributedFileSystem dfs = (DistributedFileSystem) filesys;
+    DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
+    for (DatanodeInfo dn: info) {
+      System.out.println("Live node "+dn.getName());
+      livingNodes.add(dn.getName());
+    }
+    return livingNodes;
+  }
+
   /*
    * decommission one random node.
    */
@@ -189,32 +210,17 @@ public class TestDecommissionScale extends TestCase {
   }
 
   /*
-   * decommission multiple random node.
+   * decommission selected nodes.
    */
   private ArrayList<String> decommissionNodes(NameNode namenode,
                                   Configuration conf,
                                   DFSClient client, 
                                   FileSystem filesys,
                                   FileSystem localFileSys,
-                                  int numDecom)
+                                  ArrayList<String> toDecom)
     throws IOException {
     DistributedFileSystem dfs = (DistributedFileSystem) filesys;
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
-    ArrayList<String> toDecom = new ArrayList<String>();
-
-    for (int i=0; i<numDecom; i++) {
-      int index = 0;
-      boolean found = false;
-      while (!found) {
-        index = myrand.nextInt(info.length);
-        if (!info[index].isDecommissioned()) {
-          found = true;
-        }
-      }
-      String nodename = info[index].getName();
-      System.out.println("Decommissioning node: " + nodename);
-      toDecom.add(nodename);
-    }
 
     // write nodename into the exclude file.
     ArrayList<String> nodes = new ArrayList<String>(decommissionedNodes);
@@ -304,6 +310,7 @@ public class TestDecommissionScale extends TestCase {
     conf.setInt("heartbeat.recheck.interval", 2000);
     conf.setInt("dfs.heartbeat.interval", 1);
     conf.setInt("dfs.replication.pending.timeout.sec", 4);
+    //conf.setInt("dfs.namenode.decommission.interval", 30);
     writeConfigFile(localFileSys, excludeFile, null);
 
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
@@ -318,17 +325,44 @@ public class TestDecommissionScale extends TestCase {
 
     try {
       int replicas = 3;
-      //
-      // Decommission one node. Verify that node is decommissioned.
-      // 
+
+      ArrayList<String> allNodes = getLivingNodes(cluster.getNameNode(), conf,
+                                                   client, fileSys, localFileSys);
+      ArrayList<String> downnodes = new ArrayList<String>();
+      ArrayList<MiniDFSCluster.DataNodeProperties> paused = new ArrayList<MiniDFSCluster.DataNodeProperties>();
+
+      for (int i=numDatanodes-1; i>=numToDecom ; i--) {
+        System.out.println("Stopping datanode "+allNodes.get(i)+" ...");
+        paused.add(cluster.stopDataNode(i));
+      }
+
+      Thread.sleep(15000);
+      ((DistributedFileSystem) fileSys).refreshNodes();
+      downnodes = getLivingNodes(cluster.getNameNode(), conf,
+                                 client, fileSys, localFileSys);
+
       Path file1 = new Path("decommission.dat");
       writeFile(fileSys, file1, replicas);
       System.out.println("Created file decommission.dat with " +
                          replicas + " replicas.");
       checkFile(fileSys, file1, replicas);
       printFileLocations(fileSys, file1);
-      ArrayList<String> downnodes = decommissionNodes(cluster.getNameNode(), conf,
-                                                   client, fileSys, localFileSys, numToDecom);
+
+      for (MiniDFSCluster.DataNodeProperties dp: paused) {
+        System.out.println("Restarting datanode "+dp.datanode.dnRegistration.getName()+" ...");
+        cluster.restartDataNode(dp);
+      }
+
+      ((DistributedFileSystem) fileSys).refreshNodes();
+      //Thread.sleep(10000);
+      allNodes = getLivingNodes(cluster.getNameNode(), conf,
+                                client, fileSys, localFileSys);
+
+      downnodes = decommissionNodes(cluster.getNameNode(), conf,
+                                    client, fileSys, localFileSys, downnodes);
+
+      cluster.getNameNode().namesystem.refreshNodes(conf);
+
       decommissionedNodes.addAll(downnodes);
       for (String downnode: downnodes)
         waitNodeState(fileSys, downnode, NodeState.DECOMMISSIONED);
@@ -339,6 +373,8 @@ public class TestDecommissionScale extends TestCase {
       info = client.datanodeReport(DatanodeReportType.ALL);
       printDatanodeReport(info);
       throw e;
+    } catch (Exception e) {
+      System.out.println(e.getMessage());
     } finally {
       fileSys.close();
       cluster.shutdown();
