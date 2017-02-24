@@ -41,9 +41,10 @@ import org.apache.hadoop.fs.BlockLocation;
 public class TestDecommissionScale extends TestCase {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 1024;
-  static final int fileSize = 10*blockSize;
-  static final int numDatanodes = 10;
-  static final int numToDecom = 7;
+  static final int numDatanodes = 16;
+  static final int numToDecom = 8;
+  static final int fileSize = numToDecom*blockSize;
+  static final int numFiles = 1000;
 
 
   Random myrand = new Random();
@@ -168,6 +169,7 @@ public class TestDecommissionScale extends TestCase {
     ArrayList<String> livingNodes = new ArrayList<String>();
     DistributedFileSystem dfs = (DistributedFileSystem) filesys;
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
+    System.out.println("We have "+info.length+" datanodes live"); 
     for (DatanodeInfo dn: info) {
       System.out.println("Live node "+dn.getName());
       livingNodes.add(dn.getName());
@@ -291,6 +293,39 @@ public class TestDecommissionScale extends TestCase {
       done = checkNodeState(filesys, node, state);
     }
   }
+
+
+  /*
+   * Wait till nodes are fully decommissioned.
+   */
+  private boolean waitNodesDecommissioned(FileSystem filesys, 
+                                 ArrayList<String> nodes
+                                 ) throws IOException {
+    DistributedFileSystem dfs = (DistributedFileSystem) filesys;
+    ArrayList<String> toDecom = new ArrayList<String>(nodes);
+    boolean done = false;
+    do {
+      try {
+        System.out.println("Waiting "+toDecom.size()+" datanodes to decommission");
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        // nothing
+        break;
+      }
+
+      done = true;
+      DatanodeInfo[] datanodes = dfs.getDataNodeStats();
+      for (int i = 0; i < datanodes.length; i++) {
+        DatanodeInfo dn = datanodes[i];
+        if (toDecom.contains(dn.getName())) {
+          done = done || dn.isDecommissioned();
+          System.out.println(dn.getDatanodeReport());
+          toDecom.remove(dn.getName());
+        }
+      }
+    } while (!done);
+    return done;
+  }
   
   /**
    * Tests Decommission in DFS.
@@ -341,12 +376,15 @@ public class TestDecommissionScale extends TestCase {
       downnodes = getLivingNodes(cluster.getNameNode(), conf,
                                  client, fileSys, localFileSys);
 
-      Path file1 = new Path("decommission.dat");
-      writeFile(fileSys, file1, replicas);
-      System.out.println("Created file decommission.dat with " +
-                         replicas + " replicas.");
-      checkFile(fileSys, file1, replicas);
-      printFileLocations(fileSys, file1);
+      ArrayList<Path> files = new ArrayList<Path>();
+      for (int i=0; i<numFiles; i++) {
+        Path file1 = new Path("decommission-"+i+".dat");
+        writeFile(fileSys, file1, replicas);
+        System.out.println("Created file decommission-"+i+".dat with " +
+                           replicas + " replicas.");
+        //checkFile(fileSys, file1, replicas);
+        //printFileLocations(fileSys, file1);
+      }
 
       for (MiniDFSCluster.DataNodeProperties dp: paused) {
         System.out.println("Restarting datanode "+dp.datanode.dnRegistration.getName()+" ...");
@@ -361,13 +399,13 @@ public class TestDecommissionScale extends TestCase {
       downnodes = decommissionNodes(cluster.getNameNode(), conf,
                                     client, fileSys, localFileSys, downnodes);
 
-      cluster.getNameNode().namesystem.refreshNodes(conf);
+      //cluster.getNameNode().namesystem.refreshNodes(conf);
 
       decommissionedNodes.addAll(downnodes);
-      for (String downnode: downnodes)
-        waitNodeState(fileSys, downnode, NodeState.DECOMMISSIONED);
+      waitNodesDecommissioned(fileSys, downnodes);
       //checkFile(fileSys, file1, replicas, downnode);
-      cleanupFile(fileSys, file1);
+      for (Path file1:files)
+        cleanupFile(fileSys, file1);
       cleanupFile(localFileSys, dir);
     } catch (IOException e) {
       info = client.datanodeReport(DatanodeReportType.ALL);
