@@ -44,7 +44,7 @@ public class TestDecommissionScale extends TestCase {
   static final int numDatanodes = 16;
   static final int numToDecom = 8;
   static final int fileSize = numToDecom*blockSize;
-  static final int numFiles = 1000;
+  static final int numFiles = 100;
 
 
   Random myrand = new Random();
@@ -318,9 +318,11 @@ public class TestDecommissionScale extends TestCase {
       for (int i = 0; i < datanodes.length; i++) {
         DatanodeInfo dn = datanodes[i];
         if (toDecom.contains(dn.getName())) {
-          done = done || dn.isDecommissioned();
-          System.out.println(dn.getDatanodeReport());
-          toDecom.remove(dn.getName());
+          done = done && dn.isDecommissioned();
+          if (dn.isDecommissioned()) {
+            System.out.println(dn.getDatanodeReport());
+            toDecom.remove(dn.getName());
+          }
         }
       }
     } while (!done);
