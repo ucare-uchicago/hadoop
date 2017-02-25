@@ -3765,6 +3765,16 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     long estimatedTime = System.currentTimeMillis() - startTime;
     FSNamesystem.LOG.warn(estimatedTime+" ms spent on decommissionedDatanodeCheck");
+
+    if (this.decomHackEnabled) {
+      try {
+        long extraSleep = 60 * 1000 - estimatedTime;
+        FSNamesystem.LOG.warn("decommissionedDatanodeCheck sleep for next "+extraSleep+" ms");
+        Thread.sleep(extraSleep);
+      } catch (Exception ex) {
+        FSNamesystem.LOG.error(ex.getMessage());
+      }
+    }
   }
     
   /**
@@ -4604,5 +4614,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         }
       }
     }
+  }
+
+  private boolean decomHackEnabled = false;
+
+  public void setDecommissionHack(boolean isEnable) {
+    this.decomHackEnabled = isEnable;
   }
 }
