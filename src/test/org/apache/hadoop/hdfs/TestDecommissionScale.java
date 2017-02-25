@@ -35,6 +35,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.BlockLocation;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 /**
  * This class tests the decommissioning of nodes.
  */
@@ -45,6 +48,28 @@ public class TestDecommissionScale extends TestCase {
   static final int numToDecom = 8;
   static final int fileSize = numToDecom*blockSize;
   static final int numFiles = 100;
+  static final int replicas = 3;
+
+  class FileWriter implements Runnable {
+
+    private Path filePath;
+    private FileSystem fileSys;
+
+    public FileWriter(FileSystem fileSys, Path var) {
+      this.fileSys = fileSys;
+      this.filePath = var;
+    }
+
+    public void run() {
+      try {
+        writeFile(fileSys, filePath, replicas);
+        System.out.println("Created file "+filePath.toString()+" with " +
+                           replicas + " replicas.");
+      } catch (IOException ex) {
+        System.out.println(filePath.toString()+" failed to be written: "+ex.getMessage());
+      }
+    }
+  }
 
 
   Random myrand = new Random();
@@ -361,8 +386,6 @@ public class TestDecommissionScale extends TestCase {
     DistributedFileSystem dfs = (DistributedFileSystem) fileSys;
 
     try {
-      int replicas = 3;
-
       ArrayList<String> allNodes = getLivingNodes(cluster.getNameNode(), conf,
                                                    client, fileSys, localFileSys);
       ArrayList<String> downnodes = new ArrayList<String>();
@@ -394,16 +417,26 @@ public class TestDecommissionScale extends TestCase {
       }
 
       ((DistributedFileSystem) fileSys).refreshNodes();
+      cluster.getNameNode().namesystem.setDecommissionHack(true);
       //Thread.sleep(10000);
       allNodes = getLivingNodes(cluster.getNameNode(), conf,
                                 client, fileSys, localFileSys);
 
       downnodes = decommissionNodes(cluster.getNameNode(), conf,
                                     client, fileSys, localFileSys, downnodes);
-
-      //cluster.getNameNode().namesystem.refreshNodes(conf);
-
       decommissionedNodes.addAll(downnodes);
+
+      // write another files
+      Thread.sleep(3000);
+      ExecutorService executor = Executors.newFixedThreadPool(100);
+      for (int i=0; i<numFiles; i++) {
+        Path file1 = new Path("inflight-"+i+".dat");
+        Runnable worker = new FileWriter(fileSys,file1);
+        executor.execute(worker);
+      }
+      executor.shutdown();
+      while (!executor.isTerminated()) {}
+
       waitNodesDecommissioned(fileSys, downnodes);
       //checkFile(fileSys, file1, replicas, downnode);
       for (Path file1:files)
