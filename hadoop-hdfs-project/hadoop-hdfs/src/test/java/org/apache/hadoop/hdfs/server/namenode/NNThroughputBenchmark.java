@@ -898,6 +898,7 @@ public class NNThroughputBenchmark implements Tool {
     int nrBlocks; // actual number of blocks
     BlockListAsLongs blockReportList;
     final int dnIdx;
+    int capacity = 10;
 
     private static int getNodePort(int num) throws IOException {
       int port = 1 + num;
@@ -909,6 +910,7 @@ public class NNThroughputBenchmark implements Tool {
       this.dnIdx = dnIdx;
       this.blocks = new ArrayList<BlockReportReplica>(blockCapacity);
       this.nrBlocks = 0;
+      this.capacity = blockCapacity;
     }
 
     @Override
@@ -965,13 +967,13 @@ public class NNThroughputBenchmark implements Tool {
     }
 
     boolean addBlock(Block blk) {
-      if(nrBlocks == blocks.size()) {
+      if(nrBlocks >= this.capacity) {
         if(LOG.isDebugEnabled()) {
           LOG.debug("Cannot add block: datanode capacity = " + blocks.size());
         }
         return false;
       }
-      blocks.set(nrBlocks, new BlockReportReplica(blk));
+      blocks.add(new BlockReportReplica(blk));
       nrBlocks++;
       return true;
     }
