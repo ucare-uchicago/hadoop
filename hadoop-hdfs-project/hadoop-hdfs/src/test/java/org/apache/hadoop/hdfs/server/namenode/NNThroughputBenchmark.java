@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.login.LoginException;
 
@@ -156,7 +157,7 @@ public class NNThroughputBenchmark {
     protected long elapsedTime = 0;       // time from start to finish
     protected boolean keepResults = false;// don't clean base directory on exit
     protected Level logLevel;             // logging level, ERROR by default
-    protected int ugcRefreshCount = 0;    // user group cache refresh count
+    protected long ugcRefreshCount = 0;    // user group cache refresh count
 
     protected List<StatsDaemon> daemons;
 
@@ -209,18 +210,29 @@ public class NNThroughputBenchmark {
 
     OperationStatsBase() {
       baseDir = BASE_DIR_NAME + "/" + getOpName();
+      LOG.info("DAN : change number replication to 6 ");
+      config.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 6);
+
+      /*DAN: replication default 3*/
       replication = (short) config.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
+
       numOpsRequired = 10;
-      numThreads = 3;
+
+      /*DAN: numThreads default 3*/
+      numThreads = 6; 
+
       logLevel = Level.ERROR;
-      ugcRefreshCount = Integer.MAX_VALUE;
+      ugcRefreshCount = Long.MAX_VALUE;
     }
 
     void benchmark() throws IOException {
+      LOG.info("DAN 1 : numThreads "+numThreads);
       daemons = new ArrayList<StatsDaemon>();
       long start = 0;
       int curNumThread = 1;
       try {
+
+        LOG.info("DAN 2 : numThreads "+numThreads);
         numOpsExecuted = 0;
         cumulativeTime = 0;
         if(numThreads < 1)
@@ -234,42 +246,45 @@ public class NNThroughputBenchmark {
           if(opsPerThread[tIdx] == 0)
             opsPerThread[tIdx] = 1;
         }
+
+        LOG.info("DAN 3 : numThreads "+numThreads);
         // if numThreads > numOpsRequired then the remaining threads will do nothing
         for(; tIdx < numThreads; tIdx++)
           opsPerThread[tIdx] = 0;
         setNameNodeLoggingLevel(Level.WARN);
         generateInputs(opsPerThread);
-	setNameNodeLoggingLevel(logLevel);
+	      setNameNodeLoggingLevel(logLevel);
 
+        LOG.info("DAN 4 : numThreads "+numThreads);
         while (curNumThread <= numThreads) {
-        numOpsExecuted = 0;
-        cumulativeTime = 0;
-        
-        try {
-          daemons.clear();
-          for(tIdx=0; tIdx < curNumThread; tIdx++)
-            daemons.add(new StatsDaemon(tIdx, opsPerThread[tIdx], this));
+          numOpsExecuted = 0;
+          cumulativeTime = 0;
+          
+          try {
+            daemons.clear();
+            for(tIdx=0; tIdx < curNumThread; tIdx++)
+              daemons.add(new StatsDaemon(tIdx, opsPerThread[tIdx], this));
 
-          start = System.currentTimeMillis();
-          LOG.info("Starting " + numOpsRequired + " " + getOpName() + "(s).");
-          for(nIdx=0; nIdx < curNumThread; nIdx++)
-            daemons.get(nIdx).start();
+            start = System.currentTimeMillis();
+            LOG.info("Starting " + numOpsRequired + " " + getOpName() + "(s).");
+            for(nIdx=0; nIdx < curNumThread; nIdx++)
+              daemons.get(nIdx).start();
 
-        } finally {
-          while(isInPorgress()) {
-            // try {Thread.sleep(500);} catch (InterruptedException e) {}
+          } finally {
+            while(isInPorgress()) {
+              // try {Thread.sleep(500);} catch (InterruptedException e) {}
+            }
+            elapsedTime = System.currentTimeMillis() - start;
+            for(nIdx=0; nIdx < curNumThread; nIdx++) {
+              StatsDaemon d = daemons.get(nIdx);
+              incrementStats(d.localNumOpsExecuted, d.localCumulativeTime);
+              // System.out.println(d.toString() + ": ops Exec = " + d.localNumOpsExecuted);
+            }
+            LOG.info("--- " + curNumThread + " datanodes  ---");
+            this.printStats();
           }
-          elapsedTime = System.currentTimeMillis() - start;
-          for(nIdx=0; nIdx < curNumThread; nIdx++) {
-            StatsDaemon d = daemons.get(nIdx);
-            incrementStats(d.localNumOpsExecuted, d.localCumulativeTime);
-            // System.out.println(d.toString() + ": ops Exec = " + d.localNumOpsExecuted);
-          }
-          LOG.info("--- " + curNumThread + " datanodes  ---");
-          this.printStats();
-        }
 
-        curNumThread = curNumThread * 2;
+          curNumThread = curNumThread * 2;
         }
 
       } finally {  
@@ -842,9 +857,12 @@ public class NNThroughputBenchmark {
         }
         return false;
       }
+      
       blocks.add(blk);
       nrBlocks++;
-      LOG.info("nrBlocks = " + nrBlocks);
+      if (nrBlocks % 500 == 0){
+        LOG.info("nrBlocks = " + nrBlocks);
+      }
       return true;
     }
 
@@ -995,6 +1013,23 @@ public class NNThroughputBenchmark {
       String clientName = getClientName(007);
       nameNode.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
       for(int idx=0; idx < nrFiles; idx++) {
+        
+        if (idx % 500 == 0){
+          LOG.info("DAN: idx = "+idx);
+        }
+
+        if( (idx+1) % 1000 == 0){
+          LOG.info("DAN: DELAY ");
+          try 
+          {
+              Thread.sleep(1000);
+          } 
+          catch(InterruptedException e)
+          {
+               Thread.currentThread().interrupt();
+          }
+        }
+
         String fileName = nameGenerator.getNextFileName("ThroughputBench");
         nameNode.create(fileName, FsPermission.getDefault(), clientName,
             new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication,
@@ -1017,6 +1052,7 @@ public class NNThroughputBenchmark {
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
           //LOG.info("Placing block "+dnInfo+" to datanode "+dnIdx);
+          // DAN: slow down the block adding
           datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
           nameNode.blockReceived(
               datanodes[dnIdx].dnRegistration, 
