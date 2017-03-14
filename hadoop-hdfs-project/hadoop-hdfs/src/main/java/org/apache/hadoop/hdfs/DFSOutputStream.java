@@ -1191,6 +1191,8 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
   // returns the list of targets, if any, that is being currently used.
   //
   synchronized DatanodeInfo[] getPipeline() {
+    DFSClient.LOG.info("DAN: calling getPipeline on this file 2");
+
     if (streamer == null) {
       return null;
     }
