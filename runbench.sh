@@ -6,7 +6,7 @@
 
 
 # compile, package, and install this hadoop
-# mvn package install -Pdist -DskipTests
+mvn package install -Pdist -DskipTests
 
 # execute benchmark on hadoop-0.22
 ROOT=`pwd`
@@ -19,4 +19,4 @@ cd ../../
 
 java -cp $CLASSPATH -Dproc_namenode -Xmx1000m -Djava.net.preferIPv4Stack=true -Dhadoop.log.dir=/tmp/hadoop-ucare/logs/hadoop -Dhadoop.log.file=hadoop.log -Dhadoop.id.str=riza -Dhadoop.root.logger=INFO,console org.apache.hadoop.hdfs.server.namenode.NameNode -format
  
-java -cp $CLASSPATH -Djava.net.preferIPv4Stack=true org.apache.hadoop.hdfs.server.namenode.NNThroughputBenchmark -op blockReport -datanodes 64 -reports 1 -blocksPerReport 1000 -blocksPerFile 1
+java -cp $CLASSPATH -Djava.net.preferIPv4Stack=true org.apache.hadoop.hdfs.server.namenode.NNThroughputBenchmark -op blockReport -datanodes 1024 -reports 1 -blocksPerReport 50000 -blocksPerFile 1000

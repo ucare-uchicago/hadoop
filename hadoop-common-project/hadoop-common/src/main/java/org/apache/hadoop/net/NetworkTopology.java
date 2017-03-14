@@ -377,6 +377,12 @@ public class NetworkTopology {
    */
   public boolean contains(Node node) {
     if (node == null) return false;
+
+    // start DAN edit
+    // LOG.warn("DAN: contains is called in NetworkTopology");
+    // return true;
+    // end DAN edit
+    
     netlock.readLock().lock();
     try {
       Node parent = node.getParent();
@@ -466,11 +472,11 @@ public class NetworkTopology {
       netlock.readLock().unlock();
     }
     if (n1==null) {
-      LOG.warn("The cluster does not contain node: "+NodeBase.getPath(node1));
+      LOG.warn("The cluster does not contain (n1 == null) node : "+NodeBase.getPath(node1));
       return Integer.MAX_VALUE;
     }
     if (n2==null) {
-      LOG.warn("The cluster does not contain node: "+NodeBase.getPath(node2));
+      LOG.warn("The cluster does not contain (n2 == null) node : "+NodeBase.getPath(node2));
       return Integer.MAX_VALUE;
     }
     return dis+2;

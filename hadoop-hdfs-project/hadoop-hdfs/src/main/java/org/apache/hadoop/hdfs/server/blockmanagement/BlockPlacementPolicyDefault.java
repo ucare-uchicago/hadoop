@@ -137,7 +137,18 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     if (!clusterMap.contains(writer)) {
       writer=null;
     }
-      
+    // LOG.warn("DAN: chosenNodes        =  "+chosenNodes);
+    // LOG.warn("DAN: clusterSize        =  "+clusterSize);
+    // LOG.warn("DAN: totalNumOfReplicas =  "+totalNumOfReplicas);
+    // LOG.warn("DAN: numOfReplicas      =  "+numOfReplicas);
+    // LOG.warn("DAN: writer             =  "+writer);
+    // LOG.warn("DAN: excludedNodes      =  "+excludedNodes);
+    // LOG.warn("DAN: blocksize          =  "+blocksize);
+    // LOG.warn("DAN: maxNodesPerRack    =  "+maxNodesPerRack);
+    // LOG.warn("DAN: getNumOfRacks()    =  "+clusterMap.getNumOfRacks());
+    // LOG.warn("DAN: results            =  "+results);
+
+    
     DatanodeDescriptor localNode = chooseTarget(numOfReplicas, writer, 
                                                 excludedNodes, blocksize, maxNodesPerRack, results);
     if (!returnChosenNodes) {  
@@ -145,6 +156,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
       
     // sorting nodes to form a pipeline
+    // LOG.warn("DAN: results.size() =  "+results.size());
     return getPipeline((writer==null)?localNode:writer,
                        results.toArray(new DatanodeDescriptor[results.size()]));
   }
@@ -495,6 +507,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                                            DatanodeDescriptor writer,
                                            DatanodeDescriptor[] nodes) {
     if (nodes.length==0) return nodes;
+      // LOG.warn("DAN: Use getPipeline in this file 1 ");
       
     synchronized(clusterMap) {
       int index=0;
@@ -502,24 +515,52 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         writer = nodes[0];
       }
       for(;index<nodes.length; index++) {
-        DatanodeDescriptor shortestNode = nodes[index];
-        int shortestDistance = clusterMap.getDistance(writer, shortestNode);
-        int shortestIndex = index;
-        for(int i=index+1; i<nodes.length; i++) {
-          DatanodeDescriptor currentNode = nodes[i];
-          int currentDistance = clusterMap.getDistance(writer, currentNode);
-          if (shortestDistance>currentDistance) {
-            shortestDistance = currentDistance;
-            shortestNode = currentNode;
-            shortestIndex = i;
+        // LOG.warn("DAN: index = "+index);
+        
+        // start DAN edit
+        if (!clusterMap.contains(nodes[index])) {
+          LOG.warn("DAN: cluster does not contains shortestNode (nodes[ "+index+" ]) : "+nodes[index]);
+
+          // this target nodes are not indetified , just skip all of it
+          index = nodes.length;
+        }else{
+        // end DAN edit
+          DatanodeDescriptor shortestNode = nodes[index];
+          // LOG.warn("DAN: shortestNode ( "+shortestNode+" ) is in the cluster ");
+
+          int shortestDistance = clusterMap.getDistance(writer, shortestNode);
+          int shortestIndex = index;
+          for(int i=index+1; i<nodes.length; i++) {
+            DatanodeDescriptor currentNode = nodes[i];
+
+            // start DAN edit
+            if (!clusterMap.contains(currentNode)) {
+              LOG.warn("DAN: cluster does not contains currentNode (nodes[ "+i+" ]) : "+currentNode);
+            }else{
+            // end DAN edit
+
+              int currentDistance = clusterMap.getDistance(writer, currentNode);
+              if (shortestDistance>currentDistance) {
+                shortestDistance = currentDistance;
+                shortestNode = currentNode;
+                shortestIndex = i;
+              }
+
+            // start DAN edit
+            }
+            // end DAN edit
+
           }
+          //switch position index & shortestIndex
+          if (index != shortestIndex) {
+            nodes[shortestIndex] = nodes[index];
+            nodes[index] = shortestNode;
+          }
+          writer = shortestNode;
+
+        // start DAN edit
         }
-        //switch position index & shortestIndex
-        if (index != shortestIndex) {
-          nodes[shortestIndex] = nodes[index];
-          nodes[index] = shortestNode;
-        }
-        writer = shortestNode;
+        // end DAN edit
       }
     }
     return nodes;

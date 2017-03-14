@@ -33,7 +33,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_BLOCK_SIZE_KEY = "dfs.blocksize";
   public static final long    DFS_BLOCK_SIZE_DEFAULT = 64*1024*1024;
   public static final String  DFS_REPLICATION_KEY = "dfs.replication";
-  public static final short   DFS_REPLICATION_DEFAULT = 3;
+  public static final short   DFS_REPLICATION_DEFAULT = 5; /*DAN: default 3*/
   public static final String  DFS_STREAM_BUFFER_SIZE_KEY = "dfs.stream-buffer-size";
   public static final int     DFS_STREAM_BUFFER_SIZE_DEFAULT = 4096;
   public static final String  DFS_BYTES_PER_CHECKSUM_KEY = "dfs.bytes-per-checksum";
@@ -45,7 +45,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_KEY = "dfs.client.block.write.replace-datanode-on-failure.policy";
   public static final String  DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_DEFAULT = "DEFAULT";
   public static final String  DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY = "dfs.client.socketcache.capacity";
-  public static final int     DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT = 16;
+  public static final int     DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT = 32; /*DAN: default 16*/
   
   public static final String  DFS_NAMENODE_BACKUP_ADDRESS_KEY = "dfs.namenode.backup.address";
   public static final String  DFS_NAMENODE_BACKUP_ADDRESS_DEFAULT = "localhost:50100";
@@ -116,13 +116,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_DEFAULT = 2;
   
   public static final String  DFS_LIST_LIMIT = "dfs.ls.limit";
-  public static final int     DFS_LIST_LIMIT_DEFAULT = 1000;
+  public static final int     DFS_LIST_LIMIT_DEFAULT = 100000; /*DAN: default 1000*/
   public static final String  DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY = "dfs.datanode.failed.volumes.tolerated";
   public static final int     DFS_DATANODE_FAILED_VOLUMES_TOLERATED_DEFAULT = 0;
   public static final String  DFS_DATANODE_SYNCONCLOSE_KEY = "dfs.datanode.synconclose";
   public static final boolean DFS_DATANODE_SYNCONCLOSE_DEFAULT = false;
   public static final String  DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_KEY = "dfs.datanode.socket.reuse.keepalive";
-  public static final int     DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_DEFAULT = 1000;
+  public static final int     DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_DEFAULT = 100000; /*DAN: default 1000*/
 
   //Delegation token related keys
   public static final String  DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_KEY = "dfs.namenode.delegation.key.update-interval";
@@ -230,7 +230,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long    DFS_BLOCK_ACCESS_TOKEN_LIFETIME_DEFAULT = 600L;
 
   public static final String  DFS_REPLICATION_MAX_KEY = "dfs.replication.max";
-  public static final int     DFS_REPLICATION_MAX_DEFAULT = 512;
+  public static final int     DFS_REPLICATION_MAX_DEFAULT = 1024; /*DAN: default 512*/
   public static final String  DFS_DF_INTERVAL_KEY = "dfs.df.interval";
   public static final int     DFS_DF_INTERVAL_DEFAULT = 60000;
   public static final String  DFS_BLOCKREPORT_INTERVAL_MSEC_KEY = "dfs.blockreport.intervalMsec";

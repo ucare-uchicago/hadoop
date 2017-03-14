@@ -76,8 +76,8 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.datanode.handler.count</name>
-  <value>3</value>
-  <description>The number of server threads for the datanode.</description>
+  <value>30</value>
+  <description>DAN: default 3. The number of server threads for the datanode.</description>
 </property>
 
 <property>
@@ -332,8 +332,9 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.client.block.write.replace-datanode-on-failure.enable</name>
-  <value>ture</value>
+  <value>true</value>
   <description>
+    DAN: default ture.
     If there is a datanode/network failure in the write pipeline,
     DFSClient will try to remove the failed datanode from the pipeline
     and then continue writing with the remaining datanodes. As a result,
@@ -387,8 +388,8 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.datanode.directoryscan.threads</name>
-  <value>1</value>
-  <description>How many threads should the threadpool used to compile reports
+  <value>10</value>
+  <description>DAN: default 1. How many threads should the threadpool used to compile reports
   for volumes in parallel have.
   </description>
 </property>
@@ -410,8 +411,8 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.namenode.handler.count</name>
-  <value>10</value>
-  <description>The number of server threads for the namenode.</description>
+  <value>100</value>
+  <description>DAN: Default 10. The number of server threads for the namenode.</description>
 </property>
 
 <property>
@@ -442,8 +443,9 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.namenode.safemode.extension</name>
-  <value>30000</value>
+  <value>60000</value>
   <description>
+    DAN: default is 30000.
     Determines extension of safe mode in milliseconds 
     after the threshold level is reached.
   </description>
@@ -676,9 +678,9 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.datanode.max.transfer.threads</name>
-  <value>4096</value>
+  <value>16384</value>
   <description>
-        Specifies the maximum number of threads to use for transferring data
+        DAN: default 4096. Specifies the maximum number of threads to use for transferring data
         in and out of the DN.
   </description>
 </property>
