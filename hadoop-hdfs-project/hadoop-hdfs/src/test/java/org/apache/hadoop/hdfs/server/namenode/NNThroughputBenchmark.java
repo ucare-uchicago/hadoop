@@ -22,6 +22,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -906,6 +907,23 @@ public class NNThroughputBenchmark implements Tool {
       return port;
     }
 
+    public static Comparator<TinyDatanode> TinyDatanodeComparator 
+                          = new Comparator<TinyDatanode>() {
+
+        public int compare(TinyDatanode dn1, TinyDatanode dn2) {
+            
+          String dnName1 = dn1.getXferAddr();
+          String dnName2 = dn2.getXferAddr();
+          
+          //ascending order
+          return dnName1.compareTo(dnName2);
+          
+          //descending order
+          //return fruitName2.compareTo(fruitName1);
+        }
+
+    };
+
     TinyDatanode(int dnIdx, int blockCapacity) throws IOException {
       this.dnIdx = dnIdx;
       this.blocks = new ArrayList<BlockReportReplica>(blockCapacity);
@@ -1067,6 +1085,7 @@ public class NNThroughputBenchmark implements Tool {
     private int blocksPerReport;
     private int blocksPerFile;
     private TinyDatanode[] datanodes; // array of data-nodes sorted by name
+    private long minWrite=1000000, maxWrite=-1000000;
 
     BlockReportStats(List<String> args) {
       super();
@@ -1129,6 +1148,7 @@ public class NNThroughputBenchmark implements Tool {
         datanodes[idx].sendHeartbeat();
         prevDNName = datanodes[idx].getXferAddr();
       }
+      Arrays.sort(datanodes, TinyDatanode.TinyDatanodeComparator);
 
       // create files 
       LOG.info("Creating " + nrFiles + " files with " + blocksPerFile + " blocks each.");
@@ -1155,8 +1175,13 @@ public class NNThroughputBenchmark implements Tool {
     throws IOException {
       ExtendedBlock prevBlock = null;
       for(int jdx = 0; jdx < blocksPerFile; jdx++) {
+        long start = Time.now();
         LocatedBlock loc = nameNodeProto.addBlock(fileName, clientName,
             prevBlock, null, INodeId.GRANDFATHER_INODE_ID, null);
+        long end = Time.now();
+        long time = end-start;
+        if (minWrite>time) minWrite = time;
+        if (maxWrite<time) maxWrite = time;
         prevBlock = loc.getBlock();
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getXferAddr());
@@ -1209,6 +1234,8 @@ public class NNThroughputBenchmark implements Tool {
       LOG.info("datanodes = " + numThreads + " " + blockDistribution);
       LOG.info("blocksPerReport = " + blocksPerReport);
       LOG.info("blocksPerFile = " + blocksPerFile);
+      LOG.info("minWrite = " + minWrite);
+      LOG.info("maxWrite = " + maxWrite);
       printStats();
     }
   }   // end BlockReportStats
