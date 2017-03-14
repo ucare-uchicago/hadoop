@@ -920,6 +920,8 @@ public class BlockManager {
     // Choose the blocks to be replicated
     List<List<Block>> blocksToReplicate =
       chooseUnderReplicatedBlocks(blocksToProcess);
+    LOG.warn("DAN: called computeReplicationWorkForBlock at computeReplicationWork");
+    LOG.warn("DAN: blocksToReplicate.size()   = "+blocksToReplicate.size());
 
     // replicate blocks
     int scheduledReplicationCount = 0;
@@ -1009,6 +1011,8 @@ public class BlockManager {
     INodeFile fileINode = null;
     int additionalReplRequired;
 
+    LOG.warn("DAN: .chooseTarget is called at BlockManager computeReplicationWorkForBlock");
+
     namesystem.writeLock();
     try {
       synchronized (neededReplications) {
@@ -1034,6 +1038,7 @@ public class BlockManager {
 
         assert liveReplicaNodes.size() == numReplicas.liveReplicas();
         // do not schedule more if enough replicas is already pending
+
         numEffectiveReplicas = numReplicas.liveReplicas() +
                                 pendingReplications.getNumReplicas(block);
       
@@ -1048,6 +1053,13 @@ public class BlockManager {
             return false;
           }
         }
+
+        LOG.warn("DAN: liveReplicaNodes.size()                  = "+liveReplicaNodes.size());
+        LOG.warn("DAN: numReplicas.liveReplicas()               = "+numReplicas.liveReplicas());
+        LOG.warn("DAN: block                                    = "+block);
+        LOG.warn("DAN: pendingReplications.getNumReplicas(block)= "+pendingReplications.getNumReplicas(block));
+        LOG.warn("DAN: numEffectiveReplicas                     = "+numEffectiveReplicas);
+        LOG.warn("DAN: requiredReplication                      = "+requiredReplication);
 
         if (numReplicas.liveReplicas() < requiredReplication) {
           additionalReplRequired = requiredReplication - numEffectiveReplicas;
@@ -1070,6 +1082,10 @@ public class BlockManager {
     // choose replication targets: NOT HOLDING THE GLOBAL LOCK
     // It is costly to extract the filename for which chooseTargets is called,
     // so for now we pass in the Inode itself.
+
+    LOG.warn("DAN: containingNodes                          = "+containingNodes);
+
+
     DatanodeDescriptor targets[] = 
                        blockplacement.chooseTarget(fileINode, additionalReplRequired,
                        srcNode, liveReplicaNodes, excludedNodes, block.getNumBytes());
@@ -1171,6 +1187,9 @@ public class BlockManager {
       final HashMap<Node, Node> excludedNodes,
       final long blocksize) throws IOException {
     // choose targets for the new block to be allocated.
+    // LOG.warn("");
+    // LOG.warn("DAN: .chooseTarget is called at BlockManager with IOException ");
+
     final DatanodeDescriptor targets[] = blockplacement.chooseTarget(
         src, numOfReplicas, client, excludedNodes, blocksize);
     if (targets.length < minReplication) {
@@ -1359,6 +1378,11 @@ public class BlockManager {
     Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
     reportDiff(node, report, toAdd, toRemove, toInvalidate, toCorrupt, toUC);
 
+    LOG.info("Size of toAdd        : "+toAdd.size());
+    LOG.info("Size of toRemove     : "+toRemove.size());
+    LOG.info("Size of toInvalidate : "+toInvalidate.size());
+    LOG.info("Size of toCorrupt    : "+toCorrupt.size());
+    LOG.info("Size of toUC         : "+toUC.size());
     // Process the blocks on each queue
     for (StatefulBlockInfo b : toUC) { 
       addStoredBlockUnderConstruction(b.storedBlock, node, b.reportedState);
