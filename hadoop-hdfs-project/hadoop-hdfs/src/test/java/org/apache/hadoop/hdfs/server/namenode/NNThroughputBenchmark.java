@@ -25,6 +25,9 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Preconditions;
 
@@ -1097,6 +1100,36 @@ public class NNThroughputBenchmark implements Tool {
       // adjust replication to the number of data-nodes
       this.replication = (short)Math.min(replication, getNumDatanodes());
     }
+    
+    class FileWriteTask implements Runnable 
+    {
+        private String fileName;
+        private String clientName;
+     
+        public FileWriteTask(String name, String clientName) 
+        {
+            this.fileName = name;
+            this.clientName = clientName;
+        }
+         
+        public String getName() {
+            return fileName;
+        }
+     
+        @Override
+        public void run() 
+        {
+          try {
+            nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
+                new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication,
+                BLOCK_SIZE, null);
+            ExtendedBlock lastBlock = addBlocks(fileName, clientName);
+            nameNodeProto.complete(fileName, clientName, lastBlock, INodeId.GRANDFATHER_INODE_ID);
+          } catch (IOException ex) {
+            ex.printStackTrace();
+          }
+        }
+    }
 
     /**
      * Each thread pretends its a data-node here.
@@ -1157,13 +1190,22 @@ public class NNThroughputBenchmark implements Tool {
       String clientName = getClientName(007);
       nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
           false);
+      ExecutorService executor = Executors.newCachedThreadPool();
       for(int idx=0; idx < nrFiles; idx++) {
         String fileName = nameGenerator.getNextFileName("ThroughputBench");
-        nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
-            new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication,
-            BLOCK_SIZE, null);
-        ExtendedBlock lastBlock = addBlocks(fileName, clientName);
-        nameNodeProto.complete(fileName, clientName, lastBlock, INodeId.GRANDFATHER_INODE_ID);
+        //nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
+        //    new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication,
+        //    BLOCK_SIZE, null);
+        //ExtendedBlock lastBlock = addBlocks(fileName, clientName);
+        //nameNodeProto.complete(fileName, clientName, lastBlock, INodeId.GRANDFATHER_INODE_ID);
+        FileWriteTask task = new FileWriteTask(fileName, clientName);
+        executor.execute(task);
+      }
+      try {
+        executor.awaitTermination(1, TimeUnit.HOURS);
+        executor.shutdown();
+      } catch (InterruptedException ex) {
+        ex.printStackTrace();
       }
       // prepare block reports
       for(int idx=0; idx < nrDatanodes; idx++) {
