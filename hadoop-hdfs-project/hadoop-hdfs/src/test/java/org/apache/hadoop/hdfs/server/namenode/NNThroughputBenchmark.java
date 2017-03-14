@@ -1089,8 +1089,7 @@ public class NNThroughputBenchmark implements Tool {
     private int blocksPerFile;
     private TinyDatanode[] datanodes; // array of data-nodes sorted by name
     private long nrBlocks;
-    private long minWrite=1000000, maxWrite=-1000000;
-    private double avgWrite = 0.0;
+    private SimpleStat timeStat = new SimpleStat();
 
     BlockReportStats(List<String> args) {
       super();
@@ -1104,74 +1103,74 @@ public class NNThroughputBenchmark implements Tool {
     }
     
     class FileWriteTask implements Runnable {
-        private String fileName;
-        private String clientName;
-        private long minT = 10000000, maxT = -1000000;
-        private double avgT = 0.0;
-     
-        public FileWriteTask(String name, String clientName) {
-            this.fileName = name;
-            this.clientName = clientName;
+      private String fileName;
+      private String clientName;
+      private long minT = 10000000, maxT = -1000000;
+      private double avgT = 0.0;
+
+      public FileWriteTask(String name, String clientName) {
+        this.fileName = name;
+        this.clientName = clientName;
+      }
+
+      public String getName() {
+        return fileName;
+      }
+
+      @Override
+      public void run() {
+        try {
+          nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
+              new EnumSetWritable<CreateFlag>(
+                  EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)),
+              true, replication, BLOCK_SIZE, null);
+          ExtendedBlock lastBlock = addBlocks(fileName, clientName);
+          nameNodeProto.complete(fileName, clientName, lastBlock,
+              INodeId.GRANDFATHER_INODE_ID);
+        } catch (IOException ex) {
+          ex.printStackTrace();
         }
-         
-        public String getName() {
-            return fileName;
-        }
-     
-        @Override
-        public void run() 
-        {
-          try {
-            nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
-                new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication,
-                BLOCK_SIZE, null);
-            ExtendedBlock lastBlock = addBlocks(fileName, clientName, minT, maxT, avgT);
-            nameNodeProto.complete(fileName, clientName, lastBlock, INodeId.GRANDFATHER_INODE_ID);
-            if (minT<minWrite) minWrite = minT;
-            if (maxT>maxWrite) maxWrite = maxT;
-            avgWrite += avgT;
-          } catch (IOException ex) {
-            ex.printStackTrace();
-          }
-        }
+      }
     }
 
     class SimpleStat {
-        private long min, max, sum, count;
+      private long min, max, sum, count;
 
-        public SimpleStat() {
-          min = 1000000;
-          max = -1000000;
-          sum = 0;
-          count = 0;
-        }
+      public SimpleStat() {
+        min = 1000000;
+        max = -1000000;
+        sum = 0;
+        count = 0;
+      }
 
-        public synchronized void addValue(long val) {
-          if (min > val) min = val;
-          if (max < val) max = val;
-          sum += val;
-          count += 1;
-        }
+      public synchronized void addValue(long val) {
+        if (min > val)
+          min = val;
+        if (max < val)
+          max = val;
+        sum += val;
+        count += 1;
+      }
 
-        public long getMin() {
-          return min;
-        }
+      public long getMin() {
+        return min;
+      }
 
-        public long getMax() {
-          return max;
-        }
+      public long getMax() {
+        return max;
+      }
 
-        public long getSum() {
-          return sum;
-        }
+      public long getSum() {
+        return sum;
+      }
 
-        public long getCount() {
-          return count;
-        }
+      public long getCount() {
+        return count;
+      }
 
-        public double getAvg() {
-          return (double) sum/count;
-        }
+      public double getAvg() {
+        return (double) sum / count;
+      }
     }
 
     /**
@@ -1256,8 +1255,7 @@ public class NNThroughputBenchmark implements Tool {
       }
     }
 
-    private ExtendedBlock addBlocks(String fileName, String clientName,
-                                    long minT, long maxT, double avgT)
+    private ExtendedBlock addBlocks(String fileName, String clientName)
     throws IOException {
       ExtendedBlock prevBlock = null;
       for(int jdx = 0; jdx < blocksPerFile; jdx++) {
@@ -1266,9 +1264,7 @@ public class NNThroughputBenchmark implements Tool {
             prevBlock, null, INodeId.GRANDFATHER_INODE_ID, null);
         long end = Time.now();
         long time = end-start;
-        if (minT>time) minT = time;
-        if (maxT<time) maxT = time;
-        avgT += (double) time/(nrBlocks);
+        timeStat.addValue(time);
         prevBlock = loc.getBlock();
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getXferAddr());
@@ -1321,9 +1317,9 @@ public class NNThroughputBenchmark implements Tool {
       LOG.info("datanodes = " + numThreads + " " + blockDistribution);
       LOG.info("blocksPerReport = " + blocksPerReport);
       LOG.info("blocksPerFile = " + blocksPerFile);
-      LOG.info("minWrite = " + minWrite);
-      LOG.info("maxWrite = " + maxWrite);
-      LOG.info("avgWrite = " + avgWrite);
+      LOG.info("minWrite = " + timeStat.getMin());
+      LOG.info("maxWrite = " + timeStat.getMax());
+      LOG.info("avgWrite = " + timeStat.getAvg());
       printStats();
     }
   }   // end BlockReportStats
