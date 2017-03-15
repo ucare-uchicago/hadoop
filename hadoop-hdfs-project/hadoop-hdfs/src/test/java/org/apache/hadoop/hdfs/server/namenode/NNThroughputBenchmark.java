@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1089,7 +1091,8 @@ public class NNThroughputBenchmark implements Tool {
     private int blocksPerFile;
     private TinyDatanode[] datanodes; // array of data-nodes sorted by name
     private long nrBlocks;
-    private SimpleStat timeStat = new SimpleStat();
+    private SimpleStat createStat = new SimpleStat();
+    private SimpleStat closeStat = new SimpleStat();
 
     BlockReportStats(List<String> args) {
       super();
@@ -1105,8 +1108,6 @@ public class NNThroughputBenchmark implements Tool {
     class FileWriteTask implements Runnable {
       private String fileName;
       private String clientName;
-      private long minT = 10000000, maxT = -1000000;
-      private double avgT = 0.0;
 
       public FileWriteTask(String name, String clientName) {
         this.fileName = name;
@@ -1120,13 +1121,26 @@ public class NNThroughputBenchmark implements Tool {
       @Override
       public void run() {
         try {
+          long start, end, time;
+          start = Time.now();
           nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
               new EnumSetWritable<CreateFlag>(
                   EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)),
               true, replication, BLOCK_SIZE, null);
+          end = Time.now();
+
+          time = end-start;
+          createStat.addValue(time);
+
           ExtendedBlock lastBlock = addBlocks(fileName, clientName);
+
+          start = Time.now();
           nameNodeProto.complete(fileName, clientName, lastBlock,
               INodeId.GRANDFATHER_INODE_ID);
+          end = Time.now();
+
+          time = end-start;
+          closeStat.addValue(time);
         } catch (IOException ex) {
           ex.printStackTrace();
         }
@@ -1169,7 +1183,15 @@ public class NNThroughputBenchmark implements Tool {
       }
 
       public double getAvg() {
-        return (double) sum / count;
+        return count > 0 ? (double) sum / count : 0;
+      }
+
+      @Override
+      public String toString() {
+        String ret = "min = " + getMin() + "\nmax = " + getMax()
+                     + "\navg = " + getAvg() + "\nsum = " + getSum()
+                     + "\ncount = " + getCount() + "\n";
+        return ret;
       }
     }
 
@@ -1232,7 +1254,7 @@ public class NNThroughputBenchmark implements Tool {
       String clientName = getClientName(007);
       nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
           false);
-      ExecutorService executor = Executors.newCachedThreadPool();
+      ExecutorService executor = Executors.newFixedThreadPool(48);
       for(int idx=0; idx < nrFiles; idx++) {
         String fileName = nameGenerator.getNextFileName("ThroughputBench");
         //nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
@@ -1242,10 +1264,14 @@ public class NNThroughputBenchmark implements Tool {
         //nameNodeProto.complete(fileName, clientName, lastBlock, INodeId.GRANDFATHER_INODE_ID);
         FileWriteTask task = new FileWriteTask(fileName, clientName);
         executor.execute(task);
+        if (idx % 1000 == 0) {
+          printStatAndSleep();
+        }
       }
       executor.shutdown();
       try {
         executor.awaitTermination(1, TimeUnit.HOURS);
+        printStatAndSleep();
       } catch (InterruptedException ex) {
         ex.printStackTrace();
       }
@@ -1255,16 +1281,27 @@ public class NNThroughputBenchmark implements Tool {
       }
     }
 
+    private void printStatAndSleep() {
+      try (BufferedWriter bw = new BufferedWriter(new FileWriter("/tmp/stat.out", true))) {
+        bw.write("--- create stats ---\n");
+        bw.write(createStat.toString());
+        bw.write("--- close stats ---\n");
+        bw.write(closeStat.toString());
+        LOG.info("riza: delay write for 1000 ms ");
+        Thread.sleep(1);
+      } catch (IOException e) { 
+        e.printStackTrace();
+      } catch(InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+
     private ExtendedBlock addBlocks(String fileName, String clientName)
     throws IOException {
       ExtendedBlock prevBlock = null;
       for(int jdx = 0; jdx < blocksPerFile; jdx++) {
-        long start = Time.now();
         LocatedBlock loc = nameNodeProto.addBlock(fileName, clientName,
             prevBlock, null, INodeId.GRANDFATHER_INODE_ID, null);
-        long end = Time.now();
-        long time = end-start;
-        timeStat.addValue(time);
         prevBlock = loc.getBlock();
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getXferAddr());
@@ -1317,9 +1354,16 @@ public class NNThroughputBenchmark implements Tool {
       LOG.info("datanodes = " + numThreads + " " + blockDistribution);
       LOG.info("blocksPerReport = " + blocksPerReport);
       LOG.info("blocksPerFile = " + blocksPerFile);
-      LOG.info("minWrite = " + timeStat.getMin());
-      LOG.info("maxWrite = " + timeStat.getMax());
-      LOG.info("avgWrite = " + timeStat.getAvg());
+      LOG.info("--- create stats ---");
+      LOG.info("min = " + createStat.getMin());
+      LOG.info("max = " + createStat.getMax());
+      LOG.info("avg = " + createStat.getAvg());
+      LOG.info("ct  = " + createStat.getCount());
+      LOG.info("--- close stats ---");
+      LOG.info("min = " + closeStat.getMin());
+      LOG.info("max = " + closeStat.getMax());
+      LOG.info("avg = " + closeStat.getAvg());
+      LOG.info("ct  = " + createStat.getCount());
       printStats();
     }
   }   // end BlockReportStats
