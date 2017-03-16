@@ -26,13 +26,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Preconditions;
 
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1149,14 +1152,14 @@ public class NNThroughputBenchmark implements Tool {
 
     class SimpleStat {
       private long min, max, sum, count;
-      private ArrayList<Integer> data;
+      private ArrayList<Long> data;
 
       public SimpleStat() {
         min = 1000000;
         max = -1000000;
         sum = 0;
         count = 0;
-        data = new ArrayList<Integer>();
+        data = new ArrayList<Long>();
       }
 
       public synchronized void addValue(long val) {
@@ -1195,6 +1198,29 @@ public class NNThroughputBenchmark implements Tool {
                      + "\navg = " + getAvg() + "\nsum = " + getSum()
                      + "\ncount = " + getCount() + "\n";
         return ret;
+      }
+      
+      public Map<Long,Integer> getFrequency() {
+        HashMap<Long,Integer> freq = new HashMap<Long,Integer>();
+        for (Long val : data) {
+          if (freq.containsKey(val)) {
+            freq.put(val,1);
+          } else {
+            int ct = freq.get(val)+1;
+            freq.put(val,ct);
+          }
+        }
+        return freq;
+      }
+      
+      public String getCDFDataString(){
+        StringBuilder sb = new StringBuilder();
+        Map<Long,Integer> freq = getFrequency();
+        sb.append("0 0");
+        for (Map.Entry<Long,Integer> count : freq.entrySet()) {
+          sb.append(count.getKey() + " " + ((double)count.getValue()/sum));
+        }
+        return sb.toString();
       }
     }
 
@@ -1236,7 +1262,8 @@ public class NNThroughputBenchmark implements Tool {
       int nrDatanodes = getNumDatanodes();
       nrBlocks = (int)Math.ceil((double)blocksPerReport * nrDatanodes 
                                     / replication);
-      int nrFiles = (int)Math.ceil((double)nrBlocks / blocksPerFile);
+      //int nrFiles = (int)Math.ceil((double)nrBlocks / blocksPerFile);
+      int nrFiles = 1000;
       datanodes = new TinyDatanode[nrDatanodes];
       // create data-nodes
       String prevDNName = "";
@@ -1268,13 +1295,13 @@ public class NNThroughputBenchmark implements Tool {
         FileWriteTask task = new FileWriteTask(fileName, clientName);
         executor.execute(task);
         //if (idx % 1000 == 0) {
-        //  printStatAndSleep();
+        //  printStatAndSleep(false);
         //}
       }
       executor.shutdown();
       try {
         executor.awaitTermination(1, TimeUnit.HOURS);
-        printStatAndSleep();
+        printStatAndSleep(true);
       } catch (InterruptedException ex) {
         ex.printStackTrace();
       }
@@ -1284,12 +1311,16 @@ public class NNThroughputBenchmark implements Tool {
       }
     }
 
-    private void printStatAndSleep() {
+    private void printStatAndSleep(boolean appendCDF) {
       try (BufferedWriter bw = new BufferedWriter(new FileWriter("/tmp/stat.out", true))) {
         bw.write("--- create stats ---\n");
         bw.write(createStat.toString());
+        bw.write("CDF Data:\n");
+        bw.write(createStat.getCDFDataString());
         bw.write("--- close stats ---\n");
         bw.write(closeStat.toString());
+        bw.write("CDF Data:\n");
+        bw.write(closeStat.getCDFDataString());
         LOG.info("riza: delay write for 1000 ms ");
         Thread.sleep(1);
       } catch (IOException e) { 
@@ -1362,11 +1393,13 @@ public class NNThroughputBenchmark implements Tool {
       LOG.info("max = " + createStat.getMax());
       LOG.info("avg = " + createStat.getAvg());
       LOG.info("ct  = " + createStat.getCount());
+      LOG.info("CDF Data:\n" + createStat.getCDFDataString());
       LOG.info("--- close stats ---");
       LOG.info("min = " + closeStat.getMin());
       LOG.info("max = " + closeStat.getMax());
       LOG.info("avg = " + closeStat.getAvg());
-      LOG.info("ct  = " + createStat.getCount());
+      LOG.info("ct  = " + closeStat.getCount());
+      LOG.info("CDF Data:\n" + closeStat.getCDFDataString());
       printStats();
     }
   }   // end BlockReportStats
