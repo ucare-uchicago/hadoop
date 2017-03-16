@@ -1149,15 +1149,18 @@ public class NNThroughputBenchmark implements Tool {
 
     class SimpleStat {
       private long min, max, sum, count;
+      private ArrayList<Integer> data;
 
       public SimpleStat() {
         min = 1000000;
         max = -1000000;
         sum = 0;
         count = 0;
+        data = new ArrayList<Integer>();
       }
 
       public synchronized void addValue(long val) {
+        data.add(val);
         if (min > val)
           min = val;
         if (max < val)
@@ -1264,9 +1267,9 @@ public class NNThroughputBenchmark implements Tool {
         //nameNodeProto.complete(fileName, clientName, lastBlock, INodeId.GRANDFATHER_INODE_ID);
         FileWriteTask task = new FileWriteTask(fileName, clientName);
         executor.execute(task);
-        if (idx % 1000 == 0) {
-          printStatAndSleep();
-        }
+        //if (idx % 1000 == 0) {
+        //  printStatAndSleep();
+        //}
       }
       executor.shutdown();
       try {
