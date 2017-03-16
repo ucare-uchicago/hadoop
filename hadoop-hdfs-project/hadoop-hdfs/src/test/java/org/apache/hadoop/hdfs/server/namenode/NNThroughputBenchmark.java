@@ -26,9 +26,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -1201,9 +1201,9 @@ public class NNThroughputBenchmark implements Tool {
       }
       
       public Map<Long,Integer> getFrequency() {
-        HashMap<Long,Integer> freq = new HashMap<Long,Integer>();
+        TreeMap<Long,Integer> freq = new TreeMap<Long,Integer>();
         for (Long val : data) {
-          if (freq.containsKey(val)) {
+          if (!freq.containsKey(val)) {
             freq.put(val,1);
           } else {
             int ct = freq.get(val)+1;
@@ -1216,9 +1216,11 @@ public class NNThroughputBenchmark implements Tool {
       public String getCDFDataString(){
         StringBuilder sb = new StringBuilder();
         Map<Long,Integer> freq = getFrequency();
-        sb.append("0 0");
+        sb.append("0 0\n");
+        double rollSum = 0.0;
         for (Map.Entry<Long,Integer> count : freq.entrySet()) {
-          sb.append(count.getKey() + " " + ((double)count.getValue()/sum));
+          rollSum += (double)count.getValue()/getCount();
+          sb.append(count.getKey() + " " + rollSum + "\n");
         }
         return sb.toString();
       }
