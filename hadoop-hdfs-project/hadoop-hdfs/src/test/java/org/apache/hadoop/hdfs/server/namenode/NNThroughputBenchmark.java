@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.SimpleStat;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -1096,6 +1097,7 @@ public class NNThroughputBenchmark implements Tool {
     private long nrBlocks;
     private int writerPoolSize;
     private SimpleStat createStat = new SimpleStat();
+    private long nnStart = 0, nnEnd = 0;
 
     BlockReportStats(List<String> args) {
       super();
@@ -1126,13 +1128,12 @@ public class NNThroughputBenchmark implements Tool {
       public void run() {
         try {
           long start, end, time;
-          start = Time.now();
+          start = Time.monotonicNow();
           nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
               new EnumSetWritable<CreateFlag>(
                   EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)),
               true, replication, BLOCK_SIZE, null);
-          end = Time.now();
-
+          end = Time.monotonicNow();
           time = end-start;
           createStat.addValue(time);
 
@@ -1143,85 +1144,6 @@ public class NNThroughputBenchmark implements Tool {
         } catch (IOException ex) {
           ex.printStackTrace();
         }
-      }
-    }
-
-    class SimpleStat {
-      private long min, max, sum, count;
-      private ArrayList<Long> data;
-
-      public SimpleStat() {
-        min = 1000000;
-        max = -1000000;
-        sum = 0;
-        count = 0;
-        data = new ArrayList<Long>();
-      }
-
-      public synchronized void addValue(long val) {
-        data.add(val);
-        if (min > val)
-          min = val;
-        if (max < val)
-          max = val;
-        sum += val;
-        count += 1;
-      }
-
-      public long getMin() {
-        return min;
-      }
-
-      public long getMax() {
-        return max;
-      }
-
-      public long getSum() {
-        return sum;
-      }
-
-      public long getCount() {
-        return count;
-      }
-
-      public double getAvg() {
-        return count > 0 ? (double) sum / count : 0;
-      }
-
-      @Override
-      public String toString() {
-        String ret = "min = " + getMin() + "\nmax = " + getMax()
-                     + "\navg = " + getAvg() + "\nsum = " + getSum()
-                     + "\ncount = " + getCount() + "\n";
-        return ret;
-      }
-      
-      public Map<Long,Integer> getFrequency() {
-        TreeMap<Long,Integer> freq = new TreeMap<Long,Integer>();
-        for (Long val : data) {
-          if (!freq.containsKey(val)) {
-            freq.put(val,1);
-          } else {
-            int ct = freq.get(val)+1;
-            freq.put(val,ct);
-          }
-        }
-        return freq;
-      }
-      
-      public String getCDFDataString(){
-        StringBuilder sb = new StringBuilder();
-        Map<Long,Integer> freq = getFrequency();
-        double increment = 1.0 / getCount();
-        double rollSum = 0.0;
-        sb.append("0 " + rollSum + "\n");
-        for (Map.Entry<Long,Integer> count : freq.entrySet()) {
-          for (int i=0; i<count.getValue(); i++) {
-            rollSum += increment;
-            sb.append(count.getKey() + " " + rollSum + "\n");
-          }
-        }
-        return sb.toString();
       }
     }
 
@@ -1290,6 +1212,7 @@ public class NNThroughputBenchmark implements Tool {
         nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
             false);
         ExecutorService executor = Executors.newFixedThreadPool(writerPoolSize);
+        nnStart = System.nanoTime();
         for(int idx=0; idx < nrFiles; idx++) {
           String fileName = nameGenerator.getNextFileName("ThroughputBench");
           //nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
@@ -1303,12 +1226,17 @@ public class NNThroughputBenchmark implements Tool {
           //  printStatAndSleep(false);
           //}
         }
+        nnEnd = System.nanoTime();
 
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.HOURS);
       } catch (InterruptedException ex) {
         ex.printStackTrace();
       } finally {
+        if (nnStart == 0) 
+          nnStart = System.nanoTime();
+        if (nnEnd == 0) 
+          nnEnd = System.nanoTime();
         printStatAndSleep(true);
       }
       // prepare block reports
@@ -1318,11 +1246,24 @@ public class NNThroughputBenchmark implements Tool {
     }
 
     private void printStatAndSleep(boolean appendCDF) {
-      LOG.info("--- create stats ---");
+      SimpleStat ibrStat = nameNodeProto.getIncrementalBlockReportStat();
+      long nnLifetime = (nnEnd - nnStart) / 1000;
+
+      LOG.info("--- create stats (ms) ---");
       LOG.info("min = " + createStat.getMin());
       LOG.info("max = " + createStat.getMax());
       LOG.info("avg = " + createStat.getAvg());
       LOG.info("ct  = " + createStat.getCount());
+      LOG.info("sum = " + createStat.getSum());
+      LOG.info("--- NN Lifetime (us) ---");
+      LOG.info("age = " + nnLifetime);
+      LOG.info("--- IBR stats (us) ---");
+      LOG.info("min = " + ibrStat.getMin());
+      LOG.info("max = " + ibrStat.getMax());
+      LOG.info("avg = " + ibrStat.getAvg());
+      LOG.info("ct  = " + ibrStat.getCount());
+      LOG.info("sum = " + ibrStat.getSum());
+      LOG.info("% nnLifetime = " + ((double)ibrStat.getSum()/nnLifetime));
 
       try (BufferedWriter bw = new BufferedWriter(new FileWriter("/tmp/stat.out", true))) {
         bw.write("--- create stats ---\n");
