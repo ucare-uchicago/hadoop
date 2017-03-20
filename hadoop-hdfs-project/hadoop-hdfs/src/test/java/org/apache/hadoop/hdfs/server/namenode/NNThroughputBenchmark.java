@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Preconditions;
 
-import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -264,6 +263,7 @@ public class NNThroughputBenchmark implements Tool {
         // if numThreads > numOpsRequired then the remaining threads will do nothing
         for(; tIdx < numThreads; tIdx++)
           opsPerThread[tIdx] = 0;
+        setNameNodeLoggingLevel(Level.DEBUG);
         generateInputs(opsPerThread);
         setNameNodeLoggingLevel(logLevel);
         for(tIdx=0; tIdx < numThreads; tIdx++)
@@ -1088,14 +1088,14 @@ public class NNThroughputBenchmark implements Tool {
     static final String OP_BLOCK_REPORT_NAME = "blockReport";
     static final String OP_BLOCK_REPORT_USAGE = 
       "-op blockReport [-datanodes T] [-reports N] " +
-      "[-blocksPerReport B] [-blocksPerFile F]";
+      "[-blocksPerReport B] [-blocksPerFile F] [-writerPoolSize P]";
 
     private int blocksPerReport;
     private int blocksPerFile;
     private TinyDatanode[] datanodes; // array of data-nodes sorted by name
     private long nrBlocks;
+    private int writerPoolSize;
     private SimpleStat createStat = new SimpleStat();
-    private SimpleStat closeStat = new SimpleStat();
 
     BlockReportStats(List<String> args) {
       super();
@@ -1106,6 +1106,7 @@ public class NNThroughputBenchmark implements Tool {
       parseArguments(args);
       // adjust replication to the number of data-nodes
       this.replication = (short)Math.min(replication, getNumDatanodes());
+      this.writerPoolSize = 48;
     }
     
     class FileWriteTask implements Runnable {
@@ -1137,13 +1138,8 @@ public class NNThroughputBenchmark implements Tool {
 
           ExtendedBlock lastBlock = addBlocks(fileName, clientName);
 
-          start = Time.now();
           nameNodeProto.complete(fileName, clientName, lastBlock,
               INodeId.GRANDFATHER_INODE_ID);
-          end = Time.now();
-
-          time = end-start;
-          closeStat.addValue(time);
         } catch (IOException ex) {
           ex.printStackTrace();
         }
@@ -1216,11 +1212,14 @@ public class NNThroughputBenchmark implements Tool {
       public String getCDFDataString(){
         StringBuilder sb = new StringBuilder();
         Map<Long,Integer> freq = getFrequency();
-        sb.append("0 0\n");
+        double increment = 1.0 / getCount();
         double rollSum = 0.0;
+        sb.append("0 " + rollSum + "\n");
         for (Map.Entry<Long,Integer> count : freq.entrySet()) {
-          rollSum += (double)count.getValue()/getCount();
-          sb.append(count.getKey() + " " + rollSum + "\n");
+          for (int i=0; i<count.getValue(); i++) {
+            rollSum += increment;
+            sb.append(count.getKey() + " " + rollSum + "\n");
+          }
         }
         return sb.toString();
       }
@@ -1254,6 +1253,9 @@ public class NNThroughputBenchmark implements Tool {
         } else if(args.get(i).equals("-blocksPerFile")) {
           if(i+1 == args.size())  printUsage();
           blocksPerFile = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-writerPoolSize")) {
+          if(i+1 == args.size())  printUsage();
+          writerPoolSize = Integer.parseInt(args.get(++i));
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
@@ -1264,8 +1266,8 @@ public class NNThroughputBenchmark implements Tool {
       int nrDatanodes = getNumDatanodes();
       nrBlocks = (int)Math.ceil((double)blocksPerReport * nrDatanodes 
                                     / replication);
-      //int nrFiles = (int)Math.ceil((double)nrBlocks / blocksPerFile);
-      int nrFiles = 1000;
+      int nrFiles = (int)Math.ceil((double)nrBlocks / blocksPerFile);
+      //int nrFiles = 1000;
       datanodes = new TinyDatanode[nrDatanodes];
       // create data-nodes
       String prevDNName = "";
@@ -1279,33 +1281,35 @@ public class NNThroughputBenchmark implements Tool {
       }
       Arrays.sort(datanodes, TinyDatanode.TinyDatanodeComparator);
 
-      // create files 
-      LOG.info("Creating " + nrFiles + " files with " + blocksPerFile + " blocks each.");
-      FileNameGenerator nameGenerator;
-      nameGenerator = new FileNameGenerator(getBaseDir(), 100);
-      String clientName = getClientName(007);
-      nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
-          false);
-      ExecutorService executor = Executors.newFixedThreadPool(48);
-      for(int idx=0; idx < nrFiles; idx++) {
-        String fileName = nameGenerator.getNextFileName("ThroughputBench");
-        //nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
-        //    new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication,
-        //    BLOCK_SIZE, null);
-        //ExtendedBlock lastBlock = addBlocks(fileName, clientName);
-        //nameNodeProto.complete(fileName, clientName, lastBlock, INodeId.GRANDFATHER_INODE_ID);
-        FileWriteTask task = new FileWriteTask(fileName, clientName);
-        executor.execute(task);
-        //if (idx % 1000 == 0) {
-        //  printStatAndSleep(false);
-        //}
-      }
-      executor.shutdown();
       try {
+        // create files
+        LOG.info("Creating " + nrFiles + " files with " + blocksPerFile + " blocks each.");
+        FileNameGenerator nameGenerator;
+        nameGenerator = new FileNameGenerator(getBaseDir(), 100);
+        String clientName = getClientName(007);
+        nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
+            false);
+        ExecutorService executor = Executors.newFixedThreadPool(writerPoolSize);
+        for(int idx=0; idx < nrFiles; idx++) {
+          String fileName = nameGenerator.getNextFileName("ThroughputBench");
+          //nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
+          //    new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication,
+          //    BLOCK_SIZE, null);
+          //ExtendedBlock lastBlock = addBlocks(fileName, clientName);
+          //nameNodeProto.complete(fileName, clientName, lastBlock, INodeId.GRANDFATHER_INODE_ID);
+          FileWriteTask task = new FileWriteTask(fileName, clientName);
+          executor.execute(task);
+          //if (idx % 1000 == 0) {
+          //  printStatAndSleep(false);
+          //}
+        }
+
+        executor.shutdown();
         executor.awaitTermination(1, TimeUnit.HOURS);
-        printStatAndSleep(true);
       } catch (InterruptedException ex) {
         ex.printStackTrace();
+      } finally {
+        printStatAndSleep(true);
       }
       // prepare block reports
       for(int idx=0; idx < nrDatanodes; idx++) {
@@ -1314,21 +1318,29 @@ public class NNThroughputBenchmark implements Tool {
     }
 
     private void printStatAndSleep(boolean appendCDF) {
+      LOG.info("--- create stats ---");
+      LOG.info("min = " + createStat.getMin());
+      LOG.info("max = " + createStat.getMax());
+      LOG.info("avg = " + createStat.getAvg());
+      LOG.info("ct  = " + createStat.getCount());
+
       try (BufferedWriter bw = new BufferedWriter(new FileWriter("/tmp/stat.out", true))) {
         bw.write("--- create stats ---\n");
         bw.write(createStat.toString());
-        bw.write("CDF Data:\n");
-        bw.write(createStat.getCDFDataString());
-        bw.write("--- close stats ---\n");
-        bw.write(closeStat.toString());
-        bw.write("CDF Data:\n");
-        bw.write(closeStat.getCDFDataString());
         LOG.info("riza: delay write for 1000 ms ");
         Thread.sleep(1);
       } catch (IOException e) { 
         e.printStackTrace();
       } catch(InterruptedException e) {
         Thread.currentThread().interrupt();
+      }
+
+      if (appendCDF) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("/tmp/create-lat.dat", false))) {
+          bw.write(createStat.getCDFDataString());
+        } catch (IOException e) { 
+          e.printStackTrace();
+        }
       }
     }
 
@@ -1390,18 +1402,6 @@ public class NNThroughputBenchmark implements Tool {
       LOG.info("datanodes = " + numThreads + " " + blockDistribution);
       LOG.info("blocksPerReport = " + blocksPerReport);
       LOG.info("blocksPerFile = " + blocksPerFile);
-      LOG.info("--- create stats ---");
-      LOG.info("min = " + createStat.getMin());
-      LOG.info("max = " + createStat.getMax());
-      LOG.info("avg = " + createStat.getAvg());
-      LOG.info("ct  = " + createStat.getCount());
-      LOG.info("CDF Data:\n" + createStat.getCDFDataString());
-      LOG.info("--- close stats ---");
-      LOG.info("min = " + closeStat.getMin());
-      LOG.info("max = " + closeStat.getMax());
-      LOG.info("avg = " + closeStat.getAvg());
-      LOG.info("ct  = " + closeStat.getCount());
-      LOG.info("CDF Data:\n" + closeStat.getCDFDataString());
       printStats();
     }
   }   // end BlockReportStats
