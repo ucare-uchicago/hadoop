@@ -5860,16 +5860,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public void processIncrementalBlockReport(final DatanodeID nodeID,
       final StorageReceivedDeletedBlocks srdb)
       throws IOException {
-    long start, end, time;
     writeLock();
-    start = System.nanoTime();
+    long start = monotonicNow();
     try {
       blockManager.processIncrementalBlockReport(nodeID, srdb);
     } finally {
-      end = System.nanoTime();
+      ibrStat.addValue(monotonicNow()-start);
       writeUnlock();
-      time = (end-start) / 1000;
-      ibrStat.addValue(time);
     }
   }
   

@@ -1211,7 +1211,7 @@ public class NNThroughputBenchmark implements Tool {
         nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
             false);
         ExecutorService executor = Executors.newFixedThreadPool(writerPoolSize);
-        nnStart = System.nanoTime();
+        nnStart = Time.monotonicNow();
         for(int idx=0; idx < nrFiles; idx++) {
           String fileName = nameGenerator.getNextFileName("ThroughputBench");
           //nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
@@ -1225,17 +1225,13 @@ public class NNThroughputBenchmark implements Tool {
           //  printStatAndSleep(false);
           //}
         }
-        nnEnd = System.nanoTime();
 
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.HOURS);
       } catch (InterruptedException ex) {
         ex.printStackTrace();
       } finally {
-        if (nnStart <= 0) 
-          nnStart = System.nanoTime();
-        if (nnEnd <= 0) 
-          nnEnd = System.nanoTime();
+        nnEnd = Time.monotonicNow();
         printStatAndSleep(true);
       }
       // prepare block reports
@@ -1246,7 +1242,7 @@ public class NNThroughputBenchmark implements Tool {
 
     private void printStatAndSleep(boolean appendCDF) {
       SimpleStat ibrStat = nameNodeProto.getIncrementalBlockReportStat();
-      long nnLifetime = (nnEnd - nnStart) / 1000;
+      long nnLifetime = nnEnd - nnStart;
 
       LOG.info("--- create stats (ms) ---");
       LOG.info("min = " + createStat.getMin());
@@ -1254,9 +1250,9 @@ public class NNThroughputBenchmark implements Tool {
       LOG.info("avg = " + createStat.getAvg());
       LOG.info("ct  = " + createStat.getCount());
       LOG.info("sum = " + createStat.getSum());
-      LOG.info("--- NN Lifetime (us) ---");
+      LOG.info("--- NN Lifetime (ms) ---");
       LOG.info("age = " + nnLifetime);
-      LOG.info("--- IBR stats (us) ---");
+      LOG.info("--- IBR stats (ms) ---");
       LOG.info("min = " + ibrStat.getMin());
       LOG.info("max = " + ibrStat.getMax());
       LOG.info("avg = " + ibrStat.getAvg());
