@@ -197,6 +197,7 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
+import org.apache.hadoop.hdfs.protocol.SimpleStat;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
@@ -324,6 +325,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   };
 
   private final BlockIdManager blockIdManager;
+  
+  private final SimpleStat ibrStat = new SimpleStat();
 
   @VisibleForTesting
   public boolean isAuditEnabled() {
@@ -5857,11 +5860,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public void processIncrementalBlockReport(final DatanodeID nodeID,
       final StorageReceivedDeletedBlocks srdb)
       throws IOException {
+    long start, end, time;
     writeLock();
+    start = System.nanoTime();
     try {
       blockManager.processIncrementalBlockReport(nodeID, srdb);
     } finally {
+      end = System.nanoTime();
       writeUnlock();
+      time = (end-start) / 1000;
+      ibrStat.addValue(time);
     }
   }
   
@@ -8286,5 +8294,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
+  public SimpleStat getIncrementalBlockReportStat() {
+    return ibrStat;
+  }
 }
 

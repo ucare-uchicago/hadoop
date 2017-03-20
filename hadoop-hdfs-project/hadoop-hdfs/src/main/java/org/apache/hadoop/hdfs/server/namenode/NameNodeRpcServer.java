@@ -179,7 +179,6 @@ import org.apache.hadoop.tracing.SpanReceiverInfo;
 import org.apache.hadoop.tracing.TraceAdminPB.TraceAdminService;
 import org.apache.hadoop.tracing.TraceAdminProtocolPB;
 import org.apache.hadoop.tracing.TraceAdminProtocolServerSideTranslatorPB;
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
 import org.slf4j.Logger;
@@ -216,8 +215,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   protected final InetSocketAddress clientRpcAddress;
   
   private final String minimumDataNodeVersion;
-  
-  private final SimpleStat ibrStat = new SimpleStat();
 
   public NameNodeRpcServer(Configuration conf, NameNode nn)
       throws IOException {
@@ -1356,12 +1353,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
           +" blocks.");
     }
     for(StorageReceivedDeletedBlocks r : receivedAndDeletedBlocks) {
-      long start, end, time;
-      start = System.nanoTime();
       namesystem.processIncrementalBlockReport(nodeReg, r);
-      end = System.nanoTime();
-      time = (end-start) / 1000;
-      ibrStat.addValue(time);
     }
   }
   
@@ -2040,6 +2032,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override
   public SimpleStat getIncrementalBlockReportStat() {
-    return ibrStat;
+    return namesystem.getIncrementalBlockReportStat();
   }
 }

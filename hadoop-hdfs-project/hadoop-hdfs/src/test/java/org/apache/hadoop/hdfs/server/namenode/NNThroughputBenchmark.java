@@ -264,7 +264,6 @@ public class NNThroughputBenchmark implements Tool {
         // if numThreads > numOpsRequired then the remaining threads will do nothing
         for(; tIdx < numThreads; tIdx++)
           opsPerThread[tIdx] = 0;
-        setNameNodeLoggingLevel(Level.DEBUG);
         generateInputs(opsPerThread);
         setNameNodeLoggingLevel(logLevel);
         for(tIdx=0; tIdx < numThreads; tIdx++)
@@ -1194,7 +1193,7 @@ public class NNThroughputBenchmark implements Tool {
       // create data-nodes
       String prevDNName = "";
       for(int idx=0; idx < nrDatanodes; idx++) {
-        datanodes[idx] = new TinyDatanode(idx, blocksPerReport);
+        datanodes[idx] = new TinyDatanode(idx, (int)(blocksPerReport*1.5));
         datanodes[idx].register();
         assert datanodes[idx].getXferAddr().compareTo(prevDNName) > 0
           : "Data-nodes must be sorted lexicographically.";
@@ -1233,9 +1232,9 @@ public class NNThroughputBenchmark implements Tool {
       } catch (InterruptedException ex) {
         ex.printStackTrace();
       } finally {
-        if (nnStart == 0) 
+        if (nnStart <= 0) 
           nnStart = System.nanoTime();
-        if (nnEnd == 0) 
+        if (nnEnd <= 0) 
           nnEnd = System.nanoTime();
         printStatAndSleep(true);
       }
