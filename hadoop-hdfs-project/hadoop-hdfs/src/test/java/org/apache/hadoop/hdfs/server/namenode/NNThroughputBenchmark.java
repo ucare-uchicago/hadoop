@@ -264,6 +264,7 @@ public class NNThroughputBenchmark implements Tool {
         // if numThreads > numOpsRequired then the remaining threads will do nothing
         for(; tIdx < numThreads; tIdx++)
           opsPerThread[tIdx] = 0;
+        setNameNodeLoggingLevel(Level.ERROR);
         generateInputs(opsPerThread);
         setNameNodeLoggingLevel(logLevel);
         for(tIdx=0; tIdx < numThreads; tIdx++)
@@ -1094,6 +1095,7 @@ public class NNThroughputBenchmark implements Tool {
     private int blocksPerFile;
     private TinyDatanode[] datanodes; // array of data-nodes sorted by name
     private long nrBlocks;
+    private long nrFiles;
     private int writerPoolSize;
     private SimpleStat createStat = new SimpleStat();
     private long nnStart = 0, nnEnd = 0;
@@ -1102,12 +1104,12 @@ public class NNThroughputBenchmark implements Tool {
       super();
       this.blocksPerReport = 100;
       this.blocksPerFile = 10;
+      this.writerPoolSize = 8;
       // set heartbeat interval to 3 min, so that expiration were 40 min
       config.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 3 * 60);
       parseArguments(args);
       // adjust replication to the number of data-nodes
       this.replication = (short)Math.min(replication, getNumDatanodes());
-      this.writerPoolSize = 48;
     }
     
     class FileWriteTask implements Runnable {
@@ -1187,8 +1189,8 @@ public class NNThroughputBenchmark implements Tool {
       int nrDatanodes = getNumDatanodes();
       nrBlocks = (int)Math.ceil((double)blocksPerReport * nrDatanodes 
                                     / replication);
-      int nrFiles = (int)Math.ceil((double)nrBlocks / blocksPerFile);
-      //int nrFiles = 1000;
+      nrFiles = (int)Math.ceil((double)nrBlocks / blocksPerFile);
+      //nrFiles = 1000;
       datanodes = new TinyDatanode[nrDatanodes];
       // create data-nodes
       String prevDNName = "";
@@ -1244,21 +1246,26 @@ public class NNThroughputBenchmark implements Tool {
       SimpleStat ibrStat = nameNodeProto.getIncrementalBlockReportStat();
       long nnLifetime = nnEnd - nnStart;
 
+      LOG.info("--- experiment stats ---");
+      LOG.info("nrFiles  = " + nrFiles);
+      LOG.info("nrBlocks = " + nrBlocks);
+      LOG.info("poolSize = " + writerPoolSize);
       LOG.info("--- create stats (ms) ---");
       LOG.info("min = " + createStat.getMin());
       LOG.info("max = " + createStat.getMax());
       LOG.info("avg = " + createStat.getAvg());
       LOG.info("ct  = " + createStat.getCount());
       LOG.info("sum = " + createStat.getSum());
-      LOG.info("--- NN Lifetime (ms) ---");
-      LOG.info("age = " + nnLifetime);
-      LOG.info("--- IBR stats (ms) ---");
+      LOG.info("--- IBR stats (ns) ---");
       LOG.info("min = " + ibrStat.getMin());
       LOG.info("max = " + ibrStat.getMax());
       LOG.info("avg = " + ibrStat.getAvg());
       LOG.info("ct  = " + ibrStat.getCount());
       LOG.info("sum = " + ibrStat.getSum());
-      LOG.info("% nnLifetime = " + ((double)ibrStat.getSum()/nnLifetime));
+      LOG.info("--- NN Lifetime ---");
+      LOG.info("lifetime (ms) = " + nnLifetime);
+      LOG.info("%life in IBR  = " + ((double)ibrStat.getSum()/1000000.0/nnLifetime));
+      LOG.info("IBR/ms        = " + ((double)ibrStat.getCount()/nnLifetime));
 
       try (BufferedWriter bw = new BufferedWriter(new FileWriter("/tmp/stat.out", true))) {
         bw.write("--- create stats ---\n");
