@@ -8307,11 +8307,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   public SimpleStat getCreateStat() {
-    return ibrStat;
+    return createStat;
   }
 
   public SimpleStat getWriteLockStat() {
-    return ibrStat;
+    return writeLockStat;
   }
 }
 
