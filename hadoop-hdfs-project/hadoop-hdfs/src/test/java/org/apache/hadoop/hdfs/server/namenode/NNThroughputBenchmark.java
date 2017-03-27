@@ -1244,6 +1244,8 @@ public class NNThroughputBenchmark implements Tool {
 
     private void printStatAndSleep(boolean appendCDF) {
       SimpleStat ibrStat = nameNodeProto.getIncrementalBlockReportStat();
+      SimpleStat nnCreateStat = nameNodeProto.getCreateStat();
+      SimpleStat writeLockStat = nameNodeProto.getWriteLockStat();
       long nnLifetime = nnEnd - nnStart;
 
       LOG.info("--- experiment stats ---");
@@ -1256,6 +1258,18 @@ public class NNThroughputBenchmark implements Tool {
       LOG.info("avg = " + createStat.getAvg());
       LOG.info("ct  = " + createStat.getCount());
       LOG.info("sum = " + createStat.getSum());
+      LOG.info("--- NN create stats (ms) ---");
+      LOG.info("min = " + nnCreateStat.getMin());
+      LOG.info("max = " + nnCreateStat.getMax());
+      LOG.info("avg = " + nnCreateStat.getAvg());
+      LOG.info("ct  = " + nnCreateStat.getCount());
+      LOG.info("sum = " + nnCreateStat.getSum());
+      LOG.info("--- writeLock stats (ms) ---");
+      LOG.info("min = " + writeLockStat.getMin());
+      LOG.info("max = " + writeLockStat.getMax());
+      LOG.info("avg = " + writeLockStat.getAvg());
+      LOG.info("ct  = " + writeLockStat.getCount());
+      LOG.info("sum = " + writeLockStat.getSum());
       LOG.info("--- IBR stats (ns) ---");
       LOG.info("min = " + ibrStat.getMin());
       LOG.info("max = " + ibrStat.getMax());
@@ -1263,9 +1277,11 @@ public class NNThroughputBenchmark implements Tool {
       LOG.info("ct  = " + ibrStat.getCount());
       LOG.info("sum = " + ibrStat.getSum());
       LOG.info("--- NN Lifetime ---");
-      LOG.info("lifetime (ms) = " + nnLifetime);
-      LOG.info("%life in IBR  = " + ((double)ibrStat.getSum()/1000000.0/nnLifetime));
-      LOG.info("IBR/ms        = " + ((double)ibrStat.getCount()/nnLifetime));
+      LOG.info("lifetime (ms)   = " + nnLifetime);
+      LOG.info("%life in IBR    = " + ((double)ibrStat.getSum()/1000000.0/nnLifetime));
+      LOG.info("IBR/ms          = " + ((double)ibrStat.getCount()/nnLifetime));
+      LOG.info("%life in create = " + ((double)nnCreateStat.getSum()/1000000.0/nnLifetime));
+      LOG.info("%life in lock   = " + ((double)writeLockStat.getSum()/1000000.0/nnLifetime));
 
       try (BufferedWriter bw = new BufferedWriter(new FileWriter("/tmp/stat.out", true))) {
         bw.write("--- create stats ---\n");

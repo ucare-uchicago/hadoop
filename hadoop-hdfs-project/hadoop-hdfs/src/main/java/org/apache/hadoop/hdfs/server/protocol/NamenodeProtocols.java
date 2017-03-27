@@ -44,4 +44,8 @@ public interface NamenodeProtocols
           TraceAdminProtocol {
   
   public SimpleStat getIncrementalBlockReportStat();
+
+  public SimpleStat getCreateStat();
+
+  public SimpleStat getWriteLockStat();
 }

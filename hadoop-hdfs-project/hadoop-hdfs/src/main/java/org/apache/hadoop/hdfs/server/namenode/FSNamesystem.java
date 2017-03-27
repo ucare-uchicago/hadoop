@@ -327,6 +327,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final BlockIdManager blockIdManager;
   
   private final SimpleStat ibrStat = new SimpleStat();
+  private final SimpleStat createStat = new SimpleStat();
+  private final SimpleStat writeLockStat = new SimpleStat();
+  
+  private long lockStart;
 
   @VisibleForTesting
   public boolean isAuditEnabled() {
@@ -1486,6 +1490,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override
   public void writeLock() {
     this.fsLock.writeLock().lock();
+    this.lockStart = System.nanoTime();
   }
   @Override
   public void writeLockInterruptibly() throws InterruptedException {
@@ -1493,7 +1498,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   @Override
   public void writeUnlock() {
+    long lockTime = this.lockStart - System.nanoTime();
     this.fsLock.writeLock().unlock();
+    writeLockStat.addValue(lockTime);
   }
   @Override
   public boolean hasWriteLock() {
@@ -2445,6 +2452,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // generated EDEK
     BlocksMapUpdateInfo toRemoveBlocks = null;
     writeLock();
+    long start = System.nanoTime();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot create file" + src);
@@ -2467,7 +2475,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       skipSync = true;
       throw se;
     } finally {
+      long time = System.nanoTime() - start;
       writeUnlock();
+      createStat.addValue(time);
       // There might be transactions logged while trying to recover the lease.
       // They need to be sync'ed even when an exception was thrown.
       if (!skipSync) {
@@ -5865,7 +5875,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       blockManager.processIncrementalBlockReport(nodeID, srdb);
     } finally {
-      long time = System.nanoTime()-start;
+      long time = System.nanoTime() - start;
       writeUnlock();
       ibrStat.addValue(time);
     }
@@ -8293,6 +8303,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   public SimpleStat getIncrementalBlockReportStat() {
+    return ibrStat;
+  }
+
+  public SimpleStat getCreateStat() {
+    return ibrStat;
+  }
+
+  public SimpleStat getWriteLockStat() {
     return ibrStat;
   }
 }

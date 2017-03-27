@@ -2034,4 +2034,14 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public SimpleStat getIncrementalBlockReportStat() {
     return namesystem.getIncrementalBlockReportStat();
   }
+
+  @Override
+  public SimpleStat getCreateStat() {
+    return namesystem.getCreateStat();
+  }
+
+  @Override
+  public SimpleStat getWriteLockStat() {
+    return namesystem.getWriteLockStat();
+  }
 }
