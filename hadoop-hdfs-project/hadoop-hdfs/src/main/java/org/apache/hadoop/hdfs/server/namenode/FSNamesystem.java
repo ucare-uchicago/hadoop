@@ -1498,7 +1498,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   @Override
   public void writeUnlock() {
-    long lockTime = this.lockStart - System.nanoTime();
+    long lockTime = System.nanoTime() - this.lockStart;
     this.fsLock.writeLock().unlock();
     writeLockStat.addValue(lockTime);
   }
