@@ -17,12 +17,13 @@ public class RandomWriter {
       // write file
       int nrFiles = Integer.parseInt(args[0]);
       int nrBlocksPerFile = Integer.parseInt(args[1]);
+      String filePrefix = args[2];
       byte[] randbyte = new byte[8*1024];
 
       Random rd = new Random();
       rd.nextBytes(randbyte);
       for (int i=0; i<nrFiles; i++) {
-        String fileName = "test-"+i+".txt";
+        String fileName = filePrefix+"-"+i+".txt";
         Path file = new Path("/home/ubuntu/"+fileName);
         if (hdfs.exists(file))
           hdfs.delete( file, true ); 
