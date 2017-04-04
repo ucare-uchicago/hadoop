@@ -53,6 +53,9 @@ public class HdfsFileStatus {
   private final byte storagePolicy;
   
   public static final byte[] EMPTY_NAME = new byte[0];
+  
+  // riza: note file creation in nanoTime
+  private long createdNanoTime;
 
   /**
    * Constructor
@@ -267,5 +270,13 @@ public class HdfsFileStatus {
         isSymlink() ? new Path(getSymlink()) : null,
         (getFullPath(path)).makeQualified(
             defaultUri, null)); // fully-qualify path
+  }
+  
+  public void setCreateTime(long createNanoTime) {
+    this.createdNanoTime = createNanoTime;
+  }
+  
+  public long getCreateTime() {
+    return this.createdNanoTime;
   }
 }

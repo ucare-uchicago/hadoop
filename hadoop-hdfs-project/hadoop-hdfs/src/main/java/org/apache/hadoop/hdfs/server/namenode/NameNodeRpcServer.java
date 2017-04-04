@@ -25,7 +25,9 @@ import static org.apache.hadoop.hdfs.protocol.HdfsConstants.MAX_PATH_DEPTH;
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.MAX_PATH_LENGTH;
 import static org.apache.hadoop.util.Time.now;
 
+import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
@@ -215,6 +217,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
   protected final InetSocketAddress clientRpcAddress;
   
   private final String minimumDataNodeVersion;
+  
+  // riza: experiment stat collection
+  private SimpleStat nnRpcCreateLatency = new SimpleStat("NNRpcCreateLat");
+  private long firstCreate = 0;
+  private long lastCreate = 0;
 
   public NameNodeRpcServer(Configuration conf, NameNode nn)
       throws IOException {
@@ -601,6 +608,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
       boolean createParent, short replication, long blockSize, 
       CryptoProtocolVersion[] supportedVersions)
       throws IOException {
+    if (firstCreate == 0)
+      firstCreate = System.currentTimeMillis();
+    long start = System.nanoTime();
     checkNNStartup();
     String clientMachine = getClientMachine();
     if (stateChangeLog.isDebugEnabled()) {
@@ -624,12 +634,18 @@ class NameNodeRpcServer implements NamenodeProtocols {
       status = namesystem.startFile(src, perm, clientName, clientMachine,
           flag.get(), createParent, replication, blockSize, supportedVersions,
           cacheEntry != null);
+      if (src.contains("dumpstats"))
+        dumpStats();
+      else
+        nnRpcCreateLatency.addValue(status.getCreateTime() - start);
     } finally {
       RetryCache.setState(cacheEntry, status != null, status);
     }
 
     metrics.incrFilesCreated();
     metrics.incrCreateFileOps();
+    
+    lastCreate = System.currentTimeMillis();
     return status;
   }
 
@@ -2043,5 +2059,19 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public SimpleStat getWriteLockStat() {
     return namesystem.getWriteLockStat();
+  }
+
+  private void dumpStats() {
+    long lifetime = lastCreate - firstCreate;
+    long lifeOnCreate = nnRpcCreateLatency.getSum() / (lifetime * 1000000);
+    try (BufferedWriter bw = new BufferedWriter(new FileWriter("/tmp/createstats.txt", false))) {
+      bw.write("nn first create       = " + firstCreate + "\n");
+      bw.write("nn last create        = " + lastCreate + "\n");
+      bw.write("nn lifetime(ms)       = " + lifetime + "\n");
+      bw.write("nn life on create (%) = " + lifeOnCreate + "\n");
+    } catch (IOException e) { 
+      e.printStackTrace();
+    }
+    nnRpcCreateLatency.writeOutStat("/tmp/createstats.txt", true);
   }
 }

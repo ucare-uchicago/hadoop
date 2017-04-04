@@ -1,14 +1,19 @@
 package org.apache.hadoop.hdfs.protocol;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
 
 public class SimpleStat {
+  private String name;
   private long min, max, sum, count;
   private ArrayList<Long> data;
 
-  public SimpleStat() {
+  public SimpleStat(String name) {
+    this.name = name;
     min = 1000000;
     max = -1000000;
     sum = 0;
@@ -80,5 +85,16 @@ public class SimpleStat {
       }
     }
     return sb.toString();
+  }
+  
+  public void writeOutStat(String src, boolean append) {
+    try (BufferedWriter bw = new BufferedWriter(new FileWriter(src, append))) {
+      bw.write("--- "+name+" stats ---\n");
+      bw.write(this.toString());
+      bw.write("--- "+name+" cdf ---\n");
+      bw.write(this.getCDFDataString());
+    } catch (IOException e) { 
+      e.printStackTrace();
+    }
   }
 }

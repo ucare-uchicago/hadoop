@@ -1097,7 +1097,7 @@ public class NNThroughputBenchmark implements Tool {
     private long nrBlocks;
     private long nrFiles;
     private int writerPoolSize;
-    private SimpleStat createStat = new SimpleStat();
+    private SimpleStat createStat = new SimpleStat("create");
     private long nnStart = 0, nnEnd = 0;
 
     BlockReportStats(List<String> args) {

@@ -326,9 +326,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private final BlockIdManager blockIdManager;
   
-  private final SimpleStat ibrStat = new SimpleStat();
-  private final SimpleStat createStat = new SimpleStat();
-  private final SimpleStat writeLockStat = new SimpleStat();
+  private final SimpleStat ibrStat = new SimpleStat("ibr");
+  private final SimpleStat createStat = new SimpleStat("nnCreat");
+  private final SimpleStat writeLockStat = new SimpleStat("writeLock");
   
   private long lockStart;
 
@@ -2478,6 +2478,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       long time = System.nanoTime() - start;
       writeUnlock();
       createStat.addValue(time);
+      stat.setCreateTime(start);
       // There might be transactions logged while trying to recover the lease.
       // They need to be sync'ed even when an exception was thrown.
       if (!skipSync) {
