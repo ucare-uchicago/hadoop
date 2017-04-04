@@ -631,12 +631,15 @@ class NameNodeRpcServer implements NamenodeProtocols {
     try {
       PermissionStatus perm = new PermissionStatus(getRemoteUser()
           .getShortUserName(), null, masked);
+      boolean statsDumped = false;
+      if (src.contains("dumpstats"))i {
+        dumpStats();
+        statsDumped = true;
+      }
       status = namesystem.startFile(src, perm, clientName, clientMachine,
           flag.get(), createParent, replication, blockSize, supportedVersions,
           cacheEntry != null);
-      if (src.contains("dumpstats"))
-        dumpStats();
-      else
+      if (!statsDumped)
         nnRpcCreateLatency.addValue(status.getCreateTime() - start);
     } finally {
       RetryCache.setState(cacheEntry, status != null, status);
@@ -2063,7 +2066,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   private void dumpStats() {
     long lifetime = lastCreate - firstCreate;
-    long lifeOnCreate = nnRpcCreateLatency.getSum() / (lifetime * 1000000);
+    SimpleStat createStat = getCreateStat();
+    SimpleStat ibrStat = getIncrementalBlockReportStat();
+    double lifeOnCreate = (double) createStat.getSum() / (lifetime * 1000000);
     try (BufferedWriter bw = new BufferedWriter(new FileWriter("/tmp/createstats.txt", false))) {
       bw.write("nn first create       = " + firstCreate + "\n");
       bw.write("nn last create        = " + lastCreate + "\n");
@@ -2073,5 +2078,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       e.printStackTrace();
     }
     nnRpcCreateLatency.writeOutStat("/tmp/createstats.txt", true);
+    createStat.writeOutStat("/tmp/createstats.txt", true);
+    ibrStat.writeOutStat("/tmp/createstats.txt", true);
   }
 }
