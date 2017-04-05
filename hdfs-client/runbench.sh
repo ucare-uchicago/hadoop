@@ -32,6 +32,6 @@ do
   fi
 done
 
-sleep 60
+sleep 300
 hdfs dfs -touchz /home/ubuntu/dumpstats.txt
 echo "Benchmark done!"

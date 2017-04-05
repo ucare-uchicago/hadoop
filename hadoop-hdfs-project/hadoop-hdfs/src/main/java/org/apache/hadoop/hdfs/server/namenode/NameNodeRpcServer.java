@@ -632,7 +632,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       PermissionStatus perm = new PermissionStatus(getRemoteUser()
           .getShortUserName(), null, masked);
       boolean statsDumped = false;
-      if (src.contains("dumpstats"))i {
+      if (src.contains("dumpstats")) {
         dumpStats();
         statsDumped = true;
       }
