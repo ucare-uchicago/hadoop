@@ -31,6 +31,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterInt;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
+import org.apache.hadoop.metrics2.lib.MutableStat;
 
 /**
  * This class is for maintaining  the various RPC statistics
@@ -95,6 +96,9 @@ public class RpcMetrics {
   MutableCounterLong rpcAuthorizationFailures;
   @Metric("Number of authorization sucesses")
   MutableCounterLong rpcAuthorizationSuccesses;
+  @Metric("Stat of callQueueLength")
+  MutableStat rpcQueueLengthStat;
+  
 
   @Metric("Number of open connections") public int numOpenConnections() {
     return server.getNumOpenConnections();
@@ -191,5 +195,9 @@ public class RpcMetrics {
         q.add(processingTime);
       }
     }
+  }
+  
+  public void addRpcQueueLength(long length) {
+    rpcQueueLengthStat.add(length);
   }
 }

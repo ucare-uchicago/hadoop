@@ -1871,6 +1871,7 @@ public abstract class Server {
           header.getClientId().toByteArray(), traceSpan);
 
       callQueue.put(call);              // queue the call; maybe blocked here
+      rpcMetrics.addRpcQueueLength(callQueue.size());
       incRpcCount();  // Increment the rpc count
     }
 
