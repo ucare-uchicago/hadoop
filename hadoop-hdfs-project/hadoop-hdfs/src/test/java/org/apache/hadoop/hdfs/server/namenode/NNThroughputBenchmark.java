@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -38,20 +39,29 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
+import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SimpleStat;
+import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -71,6 +81,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -1099,6 +1110,9 @@ public class NNThroughputBenchmark implements Tool {
     private int writerPoolSize;
     private SimpleStat createStat = new SimpleStat("create");
     private long nnStart = 0, nnEnd = 0;
+    private int waiting = 0;
+    private int longestWait = 0;
+    private Object mutex = new Object();
 
     BlockReportStats(List<String> args) {
       super();
@@ -1130,7 +1144,7 @@ public class NNThroughputBenchmark implements Tool {
         try {
           long start, end, time;
           start = Time.monotonicNow();
-          nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
+          blockingNameNodeCreate(fileName, FsPermission.getDefault(), clientName,
               new EnumSetWritable<CreateFlag>(
                   EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)),
               true, replication, BLOCK_SIZE, null);
@@ -1140,7 +1154,7 @@ public class NNThroughputBenchmark implements Tool {
 
           ExtendedBlock lastBlock = addBlocks(fileName, clientName);
 
-          nameNodeProto.complete(fileName, clientName, lastBlock,
+          blockingNameNodeComplete(fileName, clientName, lastBlock,
               INodeId.GRANDFATHER_INODE_ID);
         } catch (IOException ex) {
           ex.printStackTrace();
@@ -1181,6 +1195,68 @@ public class NNThroughputBenchmark implements Tool {
           writerPoolSize = Integer.parseInt(args.get(++i));
         } else if(!ignoreUnrelatedOptions)
           printUsage();
+      }
+    }
+
+    private HdfsFileStatus blockingNameNodeCreate(String src,
+        FsPermission masked, String clientName,
+        EnumSetWritable<CreateFlag> flag, boolean createParent,
+        short replication, long blockSize,
+        CryptoProtocolVersion[] supportedVersions)
+        throws SnapshotAccessControlException, AccessControlException,
+        DSQuotaExceededException, NSQuotaExceededException,
+        AlreadyBeingCreatedException, FileAlreadyExistsException,
+        FileNotFoundException, ParentNotDirectoryException, SafeModeException,
+        UnresolvedLinkException, IOException {
+      waiting++;
+      synchronized (mutex) {
+        if (longestWait < waiting)
+          longestWait = waiting;
+        waiting--;
+        return nameNodeProto.create(src, masked, clientName, flag, createParent,
+            replication, blockSize, supportedVersions);
+      }
+    }
+
+    private boolean blockingNameNodeComplete(String src, String clientName,
+        ExtendedBlock last, long fileId)
+        throws AccessControlException, FileNotFoundException, SafeModeException,
+        UnresolvedLinkException, IOException {
+      waiting++;
+      synchronized (mutex) {
+        if (longestWait < waiting)
+          longestWait = waiting;
+        waiting--;
+        return nameNodeProto.complete(src, clientName, last, fileId);
+      }
+    }
+
+    private LocatedBlock blockingNameNodeAddBlock(String src, String clientName,
+        ExtendedBlock previous, DatanodeInfo[] excludeNodes, long fileId,
+        String[] favoredNodes) throws AccessControlException,
+        FileNotFoundException, NotReplicatedYetException, SafeModeException,
+        UnresolvedLinkException, IOException {
+      waiting++;
+      synchronized (mutex) {
+        if (longestWait < waiting)
+          longestWait = waiting;
+        waiting--;
+        return nameNodeProto.addBlock(src, clientName, previous, excludeNodes,
+            fileId, favoredNodes);
+      }
+    }
+
+    public void blockingNameNodeBlockReceivedAndDeleted(
+        DatanodeRegistration registration, String poolId,
+        StorageReceivedDeletedBlocks[] rcvdAndDeletedBlocks)
+        throws IOException {
+      waiting++;
+      synchronized (mutex) {
+        if (longestWait < waiting)
+          longestWait = waiting;
+        waiting--;
+        nameNodeProto.blockReceivedAndDeleted(registration, poolId,
+            rcvdAndDeletedBlocks);
       }
     }
 
@@ -1277,11 +1353,12 @@ public class NNThroughputBenchmark implements Tool {
       LOG.info("ibrSt ct  = " + ibrStat.getCount());
       LOG.info("ibrSt sum = " + ibrStat.getSum());
       LOG.info("--- NN Lifetime ---");
-      LOG.info("lifetime (ms)   = " + nnLifetime);
-      LOG.info("%life in IBR    = " + ((double)ibrStat.getSum()/1000000.0/nnLifetime));
-      LOG.info("IBR/ms          = " + ((double)ibrStat.getCount()/nnLifetime));
-      LOG.info("%life in create = " + ((double)nnCreateStat.getSum()/1000000.0/nnLifetime));
-      LOG.info("%life in lock   = " + ((double)writeLockStat.getSum()/1000000.0/nnLifetime));
+      LOG.info("lifetime (ms)    = " + nnLifetime);
+      LOG.info("%life in IBR     = " + ((double)ibrStat.getSum()/1000000.0/nnLifetime));
+      LOG.info("IBR/ms           = " + ((double)ibrStat.getCount()/nnLifetime));
+      LOG.info("%life in create  = " + ((double)nnCreateStat.getSum()/1000000.0/nnLifetime));
+      LOG.info("%life in lock    = " + ((double)writeLockStat.getSum()/1000000.0/nnLifetime));
+      LOG.info("longestNNRpcWait = " + longestWait);
 
       try (BufferedWriter bw = new BufferedWriter(new FileWriter("/tmp/stat.out", true))) {
         bw.write("--- create stats ---\n");
@@ -1307,7 +1384,7 @@ public class NNThroughputBenchmark implements Tool {
     throws IOException {
       ExtendedBlock prevBlock = null;
       for(int jdx = 0; jdx < blocksPerFile; jdx++) {
-        LocatedBlock loc = nameNodeProto.addBlock(fileName, clientName,
+        LocatedBlock loc = blockingNameNodeAddBlock(fileName, clientName,
             prevBlock, null, INodeId.GRANDFATHER_INODE_ID, null);
         prevBlock = loc.getBlock();
         for(DatanodeInfo dnInfo : loc.getLocations()) {
@@ -1318,7 +1395,7 @@ public class NNThroughputBenchmark implements Tool {
               ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
           StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
               datanodes[dnIdx].storage.getStorageID(), rdBlocks) };
-          nameNodeProto.blockReceivedAndDeleted(datanodes[dnIdx].dnRegistration, loc
+          blockingNameNodeBlockReceivedAndDeleted(datanodes[dnIdx].dnRegistration, loc
               .getBlock().getBlockPoolId(), report);
         }
       }
