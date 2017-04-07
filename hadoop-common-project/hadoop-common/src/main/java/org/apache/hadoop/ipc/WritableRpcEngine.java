@@ -549,6 +549,8 @@ public class WritableRpcEngine implements RpcEngine {
              exception.getClass().getSimpleName();
          server.rpcMetrics.addRpcQueueTime(qTime);
          server.rpcMetrics.addRpcProcessingTime(processingTime);
+         if (detailedMetricsName.toLowerCase().contains("create"))
+           processingTime += qTime;
          server.rpcDetailedMetrics.addProcessingTime(detailedMetricsName,
              processingTime);
        }
