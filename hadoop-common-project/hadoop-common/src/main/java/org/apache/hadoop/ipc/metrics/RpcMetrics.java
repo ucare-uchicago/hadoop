@@ -72,6 +72,7 @@ public class RpcMetrics {
             "rpc processing time in milli second", "ops", "latency", interval);
       }
     }
+    rpcQueueLengthStat = registry.newStat("queueLengthStat", "queueLengthStat", "Calls", "Length", true);
     LOG.debug("Initialized " + registry);
   }
 
@@ -96,7 +97,6 @@ public class RpcMetrics {
   MutableCounterLong rpcAuthorizationFailures;
   @Metric("Number of authorization sucesses")
   MutableCounterLong rpcAuthorizationSuccesses;
-  @Metric("Stat of callQueueLength")
   MutableStat rpcQueueLengthStat;
   
 
