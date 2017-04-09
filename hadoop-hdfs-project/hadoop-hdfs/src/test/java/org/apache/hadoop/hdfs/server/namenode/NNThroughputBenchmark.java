@@ -125,6 +125,9 @@ public class NNThroughputBenchmark implements Tool {
   static Configuration config;
   static NameNode nameNode;
   static NamenodeProtocols nameNodeProto;
+  
+  // GEDA module
+  static boolean isGEDAmode;
 
   NNThroughputBenchmark(Configuration conf) throws IOException {
     config = conf;
@@ -242,6 +245,7 @@ public class NNThroughputBenchmark implements Tool {
       numThreads = 3;
       logLevel = Level.ERROR;
       ugcRefreshCount = Integer.MAX_VALUE;
+      isGEDAmode = false;
     }
 
     void benchmark() throws IOException {
@@ -1179,6 +1183,8 @@ public class NNThroughputBenchmark implements Tool {
         } else if(args.get(i).equals("-writerPoolSize")) {
           if(i+1 == args.size())  printUsage();
           writerPoolSize = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-isGEDA")){
+          isGEDAmode = true;
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
@@ -1212,7 +1218,12 @@ public class NNThroughputBenchmark implements Tool {
         String clientName = getClientName(007);
         nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
             false);
-        ExecutorService executor = Executors.newFixedThreadPool(writerPoolSize);
+        ExecutorService executor = null;
+        if(isGEDAmode){
+        	executor = Executors.newFixedThreadPool(4);
+        } else {
+        	executor = Executors.newFixedThreadPool(writerPoolSize);
+        }
         nnStart = Time.monotonicNow();
         for(int idx=0; idx < nrFiles; idx++) {
           String fileName = nameGenerator.getNextFileName("ThroughputBench");
