@@ -1491,7 +1491,7 @@ public class NNThroughputBenchmark implements Tool {
       return prevLocatedBlock;
     }
     
-    private ExtendedBlock receivedAndDeletedBlocks(LocatedBlock[] loc){
+    private ExtendedBlock receivedAndDeletedBlocks(LocatedBlock[] loc) throws IOException{
     	ExtendedBlock prevBlock = loc[loc.length-1].getBlock();;
     	for(int jdx = 0; jdx < loc.length; jdx++) {
 			for(DatanodeInfo dnInfo : loc[jdx].getLocations()) {
@@ -1500,8 +1500,7 @@ public class NNThroughputBenchmark implements Tool {
 		            loc[jdx].getBlock().getLocalBlock(), ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
 		        StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
 		            datanodes[dnIdx].storage.getStorageID(), rdBlocks) };
-		        blockingNameNodeBlockReceivedAndDeleted(datanodes[dnIdx].dnRegistration, loc[jdx]
-		            .getBlock().getBlockPoolId(), report);
+		        blockingNameNodeBlockReceivedAndDeleted(datanodes[dnIdx].dnRegistration, loc[jdx].getBlock().getBlockPoolId(), report);
 		    }
     	}
     	return prevBlock;
