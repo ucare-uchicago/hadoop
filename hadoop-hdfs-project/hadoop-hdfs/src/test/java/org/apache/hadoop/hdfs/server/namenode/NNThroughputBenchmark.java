@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -139,6 +140,7 @@ public class NNThroughputBenchmark implements Tool {
   
   // GEDA module
   static boolean isGEDAmode;
+  static ArrayList<SimpleEntry<String, LocatedBlock[]>> GEDAQueue = new ArrayList<SimpleEntry<String, LocatedBlock[]>>();
 
   NNThroughputBenchmark(Configuration conf) throws IOException {
     config = conf;
@@ -1116,7 +1118,9 @@ public class NNThroughputBenchmark implements Tool {
     private long nnStart = 0, nnEnd = 0;
     private int waiting = 0;
     private int longestWait = 0;
+    private int longestQueueSize = 0; // for GEDA evaluation
     private Object mutex = new Object();
+    private Object mutexGEDAQueue = new Object();
 
     BlockReportStats(List<String> args) {
       super();
@@ -1155,15 +1159,52 @@ public class NNThroughputBenchmark implements Tool {
           end = Time.monotonicNow();
           time = end-start;
           createStat.addValue(time);
-
-          ExtendedBlock lastBlock = addBlocks(fileName, clientName);
-
-          blockingNameNodeComplete(fileName, clientName, lastBlock,
-              INodeId.GRANDFATHER_INODE_ID);
+          
+          if(isGEDAmode){
+        	  LocatedBlock[] writtenBlocksLocation = addBlocksWithoutReport(fileName, clientName);
+        	  SimpleEntry<String, LocatedBlock[]> entry = new SimpleEntry(fileName, writtenBlocksLocation);
+        	  synchronized(mutexGEDAQueue){
+        		  GEDAQueue.add(entry);
+        	  }
+          } else {
+        	  ExtendedBlock lastBlock = addBlocks(fileName, clientName);
+              blockingNameNodeComplete(fileName, clientName, lastBlock,
+                  INodeId.GRANDFATHER_INODE_ID);
+          }
+          
         } catch (IOException ex) {
           ex.printStackTrace();
         }
       }
+    }
+    
+    // for GEDA evaluation
+    class FileReportTask implements Runnable {
+    	private String fileName;
+        private String clientName;
+        private LocatedBlock[] writtenBlocksLocation;
+
+        public FileReportTask(String name, String clientName, LocatedBlock[] writtenBlocksLocation) {
+          this.fileName = name;
+          this.clientName = clientName;
+          this.writtenBlocksLocation = writtenBlocksLocation;
+        }
+
+        public String getName() {
+          return fileName;
+        }
+        
+        @Override
+        public void run() {
+          try {
+        	ExtendedBlock lastBlock = receivedAndDeletedBlocks(writtenBlocksLocation);
+
+            blockingNameNodeComplete(fileName, clientName, lastBlock,
+                INodeId.GRANDFATHER_INODE_ID);
+          } catch (IOException ex) {
+            ex.printStackTrace();
+          }
+        }
     }
 
     /**
@@ -1296,7 +1337,7 @@ public class NNThroughputBenchmark implements Tool {
             false);
         ExecutorService executor = null;
         if(isGEDAmode){
-        	executor = Executors.newFixedThreadPool(4);
+        	executor = Executors.newFixedThreadPool(15);
         } else {
         	executor = Executors.newFixedThreadPool(writerPoolSize);
         }
@@ -1317,6 +1358,25 @@ public class NNThroughputBenchmark implements Tool {
 
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.HOURS);
+        
+        if(isGEDAmode){
+        	ExecutorService executor2 = Executors.newSingleThreadExecutor();
+        	for(int idx=0; idx<nrFiles; idx++){
+        		while(GEDAQueue.size() == 0){
+        			// wait until a file exist
+        		}
+        		SimpleEntry<String, LocatedBlock[]> entry = null;
+        		synchronized(mutexGEDAQueue){
+        			int queueSize = GEDAQueue.size();
+	        		if(queueSize > longestQueueSize){
+	        			longestQueueSize = queueSize;
+	        		}
+	        		entry = GEDAQueue.remove(0);
+        		}
+        		FileReportTask task = new FileReportTask(entry.getKey(), clientName, entry.getValue());
+                executor2.execute(task);
+        	}
+        }
       } catch (InterruptedException ex) {
         ex.printStackTrace();
       } finally {
@@ -1370,6 +1430,7 @@ public class NNThroughputBenchmark implements Tool {
       LOG.info("%life in create  = " + ((double)nnCreateStat.getSum()/1000000.0/nnLifetime));
       LOG.info("%life in lock    = " + ((double)writeLockStat.getSum()/1000000.0/nnLifetime));
       LOG.info("longestNNRpcWait = " + longestWait);
+      LOG.info("longestNNGEDAQueueSize = " + longestQueueSize);
 
       try (BufferedWriter bw = new BufferedWriter(new FileWriter("/tmp/stat.out", true))) {
         bw.write("--- create stats ---\n");
@@ -1411,6 +1472,39 @@ public class NNThroughputBenchmark implements Tool {
         }
       }
       return prevBlock;
+    }
+    
+    private LocatedBlock[] addBlocksWithoutReport(String fileName, String clientName)
+    throws IOException {
+      LocatedBlock[] prevLocatedBlock = new LocatedBlock[blocksPerFile];
+      ExtendedBlock prevBlock = null;
+      for(int jdx = 0; jdx < blocksPerFile; jdx++) {
+        LocatedBlock loc = blockingNameNodeAddBlock(fileName, clientName,
+            prevBlock, null, INodeId.GRANDFATHER_INODE_ID, null);
+        prevLocatedBlock[jdx] = loc;
+        prevBlock = loc.getBlock();
+        for(DatanodeInfo dnInfo : loc.getLocations()) {
+          int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getXferAddr());
+          datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
+        }
+      }
+      return prevLocatedBlock;
+    }
+    
+    private ExtendedBlock receivedAndDeletedBlocks(LocatedBlock[] loc){
+    	ExtendedBlock prevBlock = loc[loc.length-1].getBlock();;
+    	for(int jdx = 0; jdx < loc.length; jdx++) {
+			for(DatanodeInfo dnInfo : loc[jdx].getLocations()) {
+		        int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getXferAddr());
+		        ReceivedDeletedBlockInfo[] rdBlocks = { new ReceivedDeletedBlockInfo(
+		            loc[jdx].getBlock().getLocalBlock(), ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
+		        StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
+		            datanodes[dnIdx].storage.getStorageID(), rdBlocks) };
+		        blockingNameNodeBlockReceivedAndDeleted(datanodes[dnIdx].dnRegistration, loc[jdx]
+		            .getBlock().getBlockPoolId(), report);
+		    }
+    	}
+    	return prevBlock;
     }
 
     /**
