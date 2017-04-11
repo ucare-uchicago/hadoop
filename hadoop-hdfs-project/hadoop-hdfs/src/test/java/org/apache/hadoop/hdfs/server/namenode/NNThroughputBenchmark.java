@@ -1127,8 +1127,8 @@ public class NNThroughputBenchmark implements Tool {
     private int longestQueueSize = 0;
     BlockingQueue<Runnable> producerQueue = new LinkedBlockingQueue<Runnable>();
     BlockingQueue<Runnable> consumerQueue = new LinkedBlockingQueue<Runnable>();
-    ExecutorService producer = new ThreadPoolExecutor(12, 12, 0L, TimeUnit.MILLISECONDS, producerQueue);
-    ExecutorService consumer = new ThreadPoolExecutor(4, 4, 0L, TimeUnit.MILLISECONDS, consumerQueue);
+    ExecutorService producer = new ThreadPoolExecutor(14, 14, 0L, TimeUnit.MILLISECONDS, producerQueue);
+    ExecutorService consumer = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, consumerQueue);
     
     BlockReportStats(List<String> args) {
       super();
@@ -1220,57 +1220,58 @@ public class NNThroughputBenchmark implements Tool {
 	    		if(taskStage == 0){
 		            taskStage++;
 		            this.startCreate = Time.monotonicNow();
-		            checkLongestQueueSize();
 		            consumer.execute(this);
 	    		} else if(taskStage == 1){
+		            checkLongestQueueSize();
 	    			taskStage++;
 	    			nameNodeProto.create(filename, FsPermission.getDefault(), clientname, 
 	    					new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)),
 	    		                  true, replication, BLOCK_SIZE, null);
 		            this.endCreate = Time.monotonicNow();
 		            createStat.addValue(endCreate - startCreate);
-		            checkLongestQueueSize();
 	    			consumer.execute(this);
 	    		} else if(taskStage == 2){
+		            checkLongestQueueSize();
 	    			taskStage++;
 	    			this.loc = nameNodeProto.addBlock(filename, clientname, prevBlock, null, INodeId.GRANDFATHER_INODE_ID, null);
 	    			producer.execute(this);
 	    		} else if(taskStage == 3){
 	    			taskStage++;
 	    			prevBlock = loc.getBlock();
-	    			for(int infoidx = 0; infoidx < loc.getLocations().length; infoidx++){
-	    				this.infoidx = infoidx;
-		    			DatanodeInfo dnInfo = loc.getLocations()[infoidx];
-		  		        int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getXferAddr());
-		  		        datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
-		  		        ReceivedDeletedBlockInfo[] rdBlocks = { new ReceivedDeletedBlockInfo(
-		  		            loc.getBlock().getLocalBlock(),
-		  		            ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
-		  		        StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
-		  		            datanodes[dnIdx].storage.getStorageID(), rdBlocks) };
-		  		        rcvdAndDeletedBlocks = report;
-		  		        registration = datanodes[dnIdx].dnRegistration;
-			            checkLongestQueueSize();
-		  		        consumer.execute(this);
-	    			}
+	    			DatanodeInfo dnInfo = loc.getLocations()[infoidx];
+	  		        int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getXferAddr());
+	  		        datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
+	  		        ReceivedDeletedBlockInfo[] rdBlocks = { new ReceivedDeletedBlockInfo(
+	  		            loc.getBlock().getLocalBlock(),
+	  		            ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
+	  		        StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
+	  		            datanodes[dnIdx].storage.getStorageID(), rdBlocks) };
+	  		        rcvdAndDeletedBlocks = report;
+	  		        registration = datanodes[dnIdx].dnRegistration;
+	  		        consumer.execute(this);
 	    		} else if(taskStage == 4){
+		            checkLongestQueueSize();
 	    			taskStage++;
 	    			nameNodeProto.blockReceivedAndDeleted(registration, loc.getBlock().getBlockPoolId(),
 	    		            rcvdAndDeletedBlocks);
 	    			
-	    			if(this.infoidx >= loc.getLocations().length){
+	    			infoidx++;
+	    			if(this.infoidx < loc.getLocations().length){
+	    				taskStage = 3;
+	    				producer.execute(this);
+	    			} else {
+	    				infoidx = 0;
 	    				jdx++;
 		    			if(jdx < blocksPerFile){
 		    				taskStage = 2;
-				            checkLongestQueueSize();
 		    				consumer.execute(this);
 		    			} else {
 		    				taskStage++;
-				            checkLongestQueueSize();
 		    				consumer.execute(this);
 		    			}
 	    			}
 	    		} else if(taskStage == 5){
+		            checkLongestQueueSize();
 	    			nameNodeProto.complete(filename, clientname, prevBlock,
 	    		              INodeId.GRANDFATHER_INODE_ID);
 	    		}
