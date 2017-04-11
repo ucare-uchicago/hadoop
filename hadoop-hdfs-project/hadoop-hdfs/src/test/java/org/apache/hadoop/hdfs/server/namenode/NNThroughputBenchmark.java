@@ -256,7 +256,7 @@ public class NNThroughputBenchmark implements Tool {
 
     OperationStatsBase() {
       baseDir = BASE_DIR_NAME + "/" + getOpName();
-      replication = (short) config.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
+      replication = (short) config.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1); // jef: modify replication factor manually
       numOpsRequired = 10;
       numThreads = 3;
       logLevel = Level.ERROR;
