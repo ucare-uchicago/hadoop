@@ -1492,9 +1492,13 @@ public class NNThroughputBenchmark implements Tool {
       long nnLifetime = nnEnd - nnStart;
 
       LOG.info("--- experiment stats ---");
-      LOG.info("nrFiles  = " + nrFiles);
-      LOG.info("nrBlocks = " + nrBlocks);
-      LOG.info("poolSize = " + writerPoolSize);
+      LOG.info("blockPerRep  = " + blocksPerReport);
+      LOG.info("replication  = " + replication);
+      LOG.info("nr DNs       = " + getNumDatanodes());
+      LOG.info("nrBlocks     = " + nrBlocks);
+      LOG.info("blockPerFile = " + blocksPerFile);
+      LOG.info("nrFiles      = " + nrFiles);
+      LOG.info("poolSize     = " + writerPoolSize);
       LOG.info("--- create stats (ms) ---");
       LOG.info("creat min = " + createStat.getMin());
       LOG.info("creat max = " + createStat.getMax());
