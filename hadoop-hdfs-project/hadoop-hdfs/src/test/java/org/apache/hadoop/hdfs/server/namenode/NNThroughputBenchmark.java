@@ -30,6 +30,7 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -1438,11 +1439,13 @@ public class NNThroughputBenchmark implements Tool {
 	          GedaFileTask task = new GedaFileTask(fileName, clientName);
 	          producer.execute(task);
 	        }
-	
-        	producer.shutdown();
+	        
+	        while(consumerQueue.size() > 0){
+	        	Thread.sleep(500);
+	        }
+	        
+	        producer.shutdown();
 	        consumer.shutdown();
-	        producer.awaitTermination(1, TimeUnit.HOURS);
-	        consumer.awaitTermination(1, TimeUnit.HOURS);
         } else {
 	        ExecutorService executor = Executors.newFixedThreadPool(writerPoolSize);
 	        nnStart = Time.monotonicNow();
