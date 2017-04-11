@@ -1127,8 +1127,8 @@ public class NNThroughputBenchmark implements Tool {
     private int longestQueueSize = 0;
     BlockingQueue<Runnable> producerQueue = new LinkedBlockingQueue<Runnable>();
     BlockingQueue<Runnable> consumerQueue = new LinkedBlockingQueue<Runnable>();
-    ExecutorService producer = new ThreadPoolExecutor(14, 14, 0L, TimeUnit.MILLISECONDS, producerQueue);
-    ExecutorService consumer = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, consumerQueue);
+    ThreadPoolExecutor producer = new ThreadPoolExecutor(14, 14, 0L, TimeUnit.MILLISECONDS, producerQueue);
+    ThreadPoolExecutor consumer = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, consumerQueue);
     
     BlockReportStats(List<String> args) {
       super();
@@ -1342,6 +1342,10 @@ public class NNThroughputBenchmark implements Tool {
           writerPoolSize = Integer.parseInt(args.get(++i));
         } else if(args.get(i).equals("-isGEDA")){
           isGEDAmode = true;
+        } else if(args.get(i).equals("-producer" )){
+          producer.setCorePoolSize(Integer.parseInt(args.get(++i)));
+        } else if(args.get(i).equals("-consumer" )){
+          consumer.setCorePoolSize(Integer.parseInt(args.get(++i)));
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
