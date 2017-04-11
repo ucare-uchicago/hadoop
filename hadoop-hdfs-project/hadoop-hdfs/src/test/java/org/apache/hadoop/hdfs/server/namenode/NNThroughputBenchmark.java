@@ -1226,6 +1226,7 @@ public class NNThroughputBenchmark implements Tool {
 	    		                  true, replication, BLOCK_SIZE, null);
 		            this.endCreate = Time.monotonicNow();
 		            createStat.addValue(endCreate - startCreate);
+		            checkLongestQueueSize();
 	    			consumer.execute(this);
 	    		} else if(taskStage == 2){
 	    			taskStage++;
@@ -1244,6 +1245,7 @@ public class NNThroughputBenchmark implements Tool {
 	  		            datanodes[dnIdx].storage.getStorageID(), rdBlocks) };
 	  		        rcvdAndDeletedBlocks = report;
 	  		        registration = datanodes[dnIdx].dnRegistration;
+		            checkLongestQueueSize();
 	  		        consumer.execute(this);
 	    		} else if(taskStage == 4){
 	    			taskStage++;
@@ -1258,9 +1260,11 @@ public class NNThroughputBenchmark implements Tool {
 		    			jdx++;
 		    			if(jdx < blocksPerFile){
 		    				taskStage = 2;
+				            checkLongestQueueSize();
 		    				consumer.execute(this);
 		    			} else {
 		    				taskStage++;
+				            checkLongestQueueSize();
 		    				consumer.execute(this);
 		    			}
 	    			}
