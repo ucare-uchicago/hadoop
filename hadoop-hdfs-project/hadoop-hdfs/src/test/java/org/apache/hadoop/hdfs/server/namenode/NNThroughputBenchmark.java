@@ -1206,7 +1206,7 @@ public class NNThroughputBenchmark implements Tool {
     	}
     	
     	public void checkLongestQueueSize(){
-    		LOG.info("CurrentLongestQueueSize=" + longestQueueSize + " currentConsumerQueueSize=" + consumerQueue.size());
+    		LOG.info("longestQueueSize=" + longestQueueSize + " consumerQueueSize=" + consumerQueue.size() + " process=" + filename);
     		if(longestQueueSize < consumerQueue.size()){
     			longestQueueSize = consumerQueue.size();
     		}
@@ -1236,29 +1236,28 @@ public class NNThroughputBenchmark implements Tool {
 	    		} else if(taskStage == 3){
 	    			taskStage++;
 	    			prevBlock = loc.getBlock();
-	    			DatanodeInfo dnInfo = loc.getLocations()[infoidx];
-	  		        int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getXferAddr());
-	  		        datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
-	  		        ReceivedDeletedBlockInfo[] rdBlocks = { new ReceivedDeletedBlockInfo(
-	  		            loc.getBlock().getLocalBlock(),
-	  		            ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
-	  		        StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
-	  		            datanodes[dnIdx].storage.getStorageID(), rdBlocks) };
-	  		        rcvdAndDeletedBlocks = report;
-	  		        registration = datanodes[dnIdx].dnRegistration;
-		            checkLongestQueueSize();
-	  		        consumer.execute(this);
+	    			for(int infoidx = 0; infoidx < loc.getLocations().length; infoidx++){
+	    				this.infoidx = infoidx;
+		    			DatanodeInfo dnInfo = loc.getLocations()[infoidx];
+		  		        int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getXferAddr());
+		  		        datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
+		  		        ReceivedDeletedBlockInfo[] rdBlocks = { new ReceivedDeletedBlockInfo(
+		  		            loc.getBlock().getLocalBlock(),
+		  		            ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
+		  		        StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
+		  		            datanodes[dnIdx].storage.getStorageID(), rdBlocks) };
+		  		        rcvdAndDeletedBlocks = report;
+		  		        registration = datanodes[dnIdx].dnRegistration;
+			            checkLongestQueueSize();
+		  		        consumer.execute(this);
+	    			}
 	    		} else if(taskStage == 4){
 	    			taskStage++;
 	    			nameNodeProto.blockReceivedAndDeleted(registration, loc.getBlock().getBlockPoolId(),
 	    		            rcvdAndDeletedBlocks);
-	    			infoidx++;
-	    			if(infoidx < loc.getLocations().length){
-	    				taskStage = 3;
-	    				producer.execute(this);
-	    			} else {
-		    			infoidx = 0;
-		    			jdx++;
+	    			
+	    			if(this.infoidx >= loc.getLocations().length){
+	    				jdx++;
 		    			if(jdx < blocksPerFile){
 		    				taskStage = 2;
 				            checkLongestQueueSize();
@@ -1443,6 +1442,7 @@ public class NNThroughputBenchmark implements Tool {
 	          
 	          GedaFileTask task = new GedaFileTask(fileName, clientName);
 	          producer.execute(task);
+	          LOG.info("Loaded file=" + fileName + " to Producer.");
 	        }
 	        
 	        while(consumerQueue.size() > 0){
