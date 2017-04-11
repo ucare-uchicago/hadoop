@@ -31,8 +31,11 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Preconditions;
@@ -140,7 +143,6 @@ public class NNThroughputBenchmark implements Tool {
   
   // GEDA module
   static boolean isGEDAmode;
-  static ArrayList<SimpleEntry<String, LocatedBlock[]>> GEDAQueue = new ArrayList<SimpleEntry<String, LocatedBlock[]>>();
 
   NNThroughputBenchmark(Configuration conf) throws IOException {
     config = conf;
@@ -1118,10 +1120,14 @@ public class NNThroughputBenchmark implements Tool {
     private long nnStart = 0, nnEnd = 0;
     private int waiting = 0;
     private int longestWait = 0;
-    private int longestQueueSize = 0; // for GEDA evaluation
     private Object mutex = new Object();
-    private Object mutexGEDAQueue = new Object();
-
+    
+    // for GEDA evaluation
+    private int longestQueueSize = 0;
+    BlockingQueue<Runnable> consumerQueue = new LinkedBlockingQueue<Runnable>();
+    ExecutorService producer = null;
+    ExecutorService consumer = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, consumerQueue);
+    
     BlockReportStats(List<String> args) {
       super();
       this.blocksPerReport = 100;
@@ -1160,18 +1166,10 @@ public class NNThroughputBenchmark implements Tool {
           time = end-start;
           createStat.addValue(time);
           
-          if(isGEDAmode){
-        	  LocatedBlock[] writtenBlocksLocation = addBlocksWithoutReport(fileName, clientName);
-        	  SimpleEntry<String, LocatedBlock[]> entry = new SimpleEntry(fileName, writtenBlocksLocation);
-        	  synchronized(mutexGEDAQueue){
-        		  GEDAQueue.add(entry);
-        	  }
-          } else {
-        	  ExtendedBlock lastBlock = addBlocks(fileName, clientName);
-              blockingNameNodeComplete(fileName, clientName, lastBlock,
-                  INodeId.GRANDFATHER_INODE_ID);
-          }
-          
+    	  ExtendedBlock lastBlock = addBlocks(fileName, clientName);
+    	  
+          blockingNameNodeComplete(fileName, clientName, lastBlock,
+              INodeId.GRANDFATHER_INODE_ID);
         } catch (IOException ex) {
           ex.printStackTrace();
         }
@@ -1179,6 +1177,98 @@ public class NNThroughputBenchmark implements Tool {
     }
     
     // for GEDA evaluation
+    class GedaFileTask implements Runnable {
+    	private int taskStage;
+    	private String filename;
+    	private String clientname;
+    	private ExtendedBlock prevBlock;
+    	private LocatedBlock loc;
+    	private int jdx;
+    	private int infoidx;
+    	private DatanodeRegistration registration;
+    	private StorageReceivedDeletedBlocks[] rcvdAndDeletedBlocks;
+    	private long startCreate;
+    	private long endCreate;
+    	
+    	public GedaFileTask(String filename, String clientname){
+    		this.taskStage = 0;
+    		this.filename = filename;
+    		this.clientname = clientname;
+    		this.prevBlock = null;
+    		this.loc = null;
+    		this.jdx = 0;
+    		this.infoidx = 0;
+    		this.registration = null;
+    		this.rcvdAndDeletedBlocks = null;
+    		this.startCreate = 0;
+    		this.endCreate = 0;
+    	}
+    	
+    	public void checkLongestQueueSize(){
+    		if(longestQueueSize < consumerQueue.size()){
+    			longestQueueSize = consumerQueue.size();
+    		}
+    	}
+    	
+    	@Override
+    	public void run() {
+    		if(taskStage == 0){
+	            taskStage++;
+	            this.startCreate = Time.monotonicNow();
+	            checkLongestQueueSize();
+	            consumer.execute(this);
+    		} else if(taskStage == 1){
+    			taskStage++;
+    			nameNodeProto.create(filename, FsPermission.getDefault(), clientname, 
+    					new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)),
+    		                  true, replication, BLOCK_SIZE, null);
+	            this.endCreate = Time.monotonicNow();
+	            createStat.addValue(endCreate - startCreate);
+    			consumer.execute(this);
+    		} else if(taskStage == 2){
+    			taskStage++;
+    			this.loc = nameNodeProto.addBlock(filename, clientname, prevBlock, null, INodeId.GRANDFATHER_INODE_ID, null);
+    			producer.execute(this);
+    		} else if(taskStage == 3){
+    			taskStage++;
+    			prevBlock = loc.getBlock();
+    			DatanodeInfo dnInfo = loc.getLocations()[infoidx];
+  		        int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getXferAddr());
+  		        datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
+  		        ReceivedDeletedBlockInfo[] rdBlocks = { new ReceivedDeletedBlockInfo(
+  		            loc.getBlock().getLocalBlock(),
+  		            ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
+  		        StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
+  		            datanodes[dnIdx].storage.getStorageID(), rdBlocks) };
+  		        rcvdAndDeletedBlocks = report;
+  		        registration = datanodes[dnIdx].dnRegistration;
+  		        consumer.execute(this);
+    		} else if(taskStage == 4){
+    			taskStage++;
+    			nameNodeProto.blockReceivedAndDeleted(registration, loc.getBlock().getBlockPoolId(),
+    		            rcvdAndDeletedBlocks);
+    			infoidx++;
+    			if(infoidx < loc.getLocations().length){
+    				taskStage = 3;
+    				producer.execute(this);
+    			} else {
+	    			infoidx = 0;
+	    			jdx++;
+	    			if(jdx < blocksPerFile){
+	    				taskStage = 2;
+	    				consumer.execute(this);
+	    			} else {
+	    				taskStage++;
+	    				consumer.execute(this);
+	    			}
+    			}
+    		} else if(taskStage == 5){
+    			nameNodeProto.complete(filename, clientname, prevBlock,
+    		              INodeId.GRANDFATHER_INODE_ID);
+    		}
+    	}
+    }
+    
     class FileReportTask implements Runnable {
     	private String fileName;
         private String clientName;
@@ -1335,47 +1425,39 @@ public class NNThroughputBenchmark implements Tool {
         String clientName = getClientName(007);
         nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
             false);
-        ExecutorService executor = null;
         if(isGEDAmode){
-        	executor = Executors.newFixedThreadPool(15);
+        	producer = Executors.newFixedThreadPool(15);
+            nnStart = Time.monotonicNow();
+	        for(int idx=0; idx < nrFiles; idx++) {
+	          String fileName = nameGenerator.getNextFileName("ThroughputBench");
+	          
+	          GedaFileTask task = new GedaFileTask(fileName, clientName);
+	          producer.execute(task);
+	        }
+	
+        	producer.shutdown();
+	        consumer.shutdown();
+	        producer.awaitTermination(1, TimeUnit.HOURS);
+	        consumer.awaitTermination(1, TimeUnit.HOURS);
         } else {
-        	executor = Executors.newFixedThreadPool(writerPoolSize);
-        }
-        nnStart = Time.monotonicNow();
-        for(int idx=0; idx < nrFiles; idx++) {
-          String fileName = nameGenerator.getNextFileName("ThroughputBench");
-          //nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
-          //    new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication,
-          //    BLOCK_SIZE, null);
-          //ExtendedBlock lastBlock = addBlocks(fileName, clientName);
-          //nameNodeProto.complete(fileName, clientName, lastBlock, INodeId.GRANDFATHER_INODE_ID);
-          FileWriteTask task = new FileWriteTask(fileName, clientName);
-          executor.execute(task);
-          //if (idx % 1000 == 0) {
-          //  printStatAndSleep(false);
-          //}
-        }
-
-        executor.shutdown();
-        executor.awaitTermination(1, TimeUnit.HOURS);
-        
-        if(isGEDAmode){
-        	ExecutorService executor2 = Executors.newSingleThreadExecutor();
-        	for(int idx=0; idx<nrFiles; idx++){
-        		while(GEDAQueue.size() == 0){
-        			// wait until a file exist
-        		}
-        		SimpleEntry<String, LocatedBlock[]> entry = null;
-        		synchronized(mutexGEDAQueue){
-        			int queueSize = GEDAQueue.size();
-	        		if(queueSize > longestQueueSize){
-	        			longestQueueSize = queueSize;
-	        		}
-	        		entry = GEDAQueue.remove(0);
-        		}
-        		FileReportTask task = new FileReportTask(entry.getKey(), clientName, entry.getValue());
-                executor2.execute(task);
-        	}
+	        ExecutorService executor = Executors.newFixedThreadPool(writerPoolSize);
+	        nnStart = Time.monotonicNow();
+	        for(int idx=0; idx < nrFiles; idx++) {
+	          String fileName = nameGenerator.getNextFileName("ThroughputBench");
+	          //nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
+	          //    new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication,
+	          //    BLOCK_SIZE, null);
+	          //ExtendedBlock lastBlock = addBlocks(fileName, clientName);
+	          //nameNodeProto.complete(fileName, clientName, lastBlock, INodeId.GRANDFATHER_INODE_ID);
+	          FileWriteTask task = new FileWriteTask(fileName, clientName);
+	          executor.execute(task);
+	          //if (idx % 1000 == 0) {
+	          //  printStatAndSleep(false);
+	          //}
+	        }
+	
+	        executor.shutdown();
+	        executor.awaitTermination(1, TimeUnit.HOURS);
         }
       } catch (InterruptedException ex) {
         ex.printStackTrace();
