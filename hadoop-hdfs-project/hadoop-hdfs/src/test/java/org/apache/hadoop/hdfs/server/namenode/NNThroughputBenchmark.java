@@ -1212,59 +1212,63 @@ public class NNThroughputBenchmark implements Tool {
     	
     	@Override
     	public void run() {
-    		if(taskStage == 0){
-	            taskStage++;
-	            this.startCreate = Time.monotonicNow();
-	            checkLongestQueueSize();
-	            consumer.execute(this);
-    		} else if(taskStage == 1){
-    			taskStage++;
-    			nameNodeProto.create(filename, FsPermission.getDefault(), clientname, 
-    					new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)),
-    		                  true, replication, BLOCK_SIZE, null);
-	            this.endCreate = Time.monotonicNow();
-	            createStat.addValue(endCreate - startCreate);
-    			consumer.execute(this);
-    		} else if(taskStage == 2){
-    			taskStage++;
-    			this.loc = nameNodeProto.addBlock(filename, clientname, prevBlock, null, INodeId.GRANDFATHER_INODE_ID, null);
-    			producer.execute(this);
-    		} else if(taskStage == 3){
-    			taskStage++;
-    			prevBlock = loc.getBlock();
-    			DatanodeInfo dnInfo = loc.getLocations()[infoidx];
-  		        int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getXferAddr());
-  		        datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
-  		        ReceivedDeletedBlockInfo[] rdBlocks = { new ReceivedDeletedBlockInfo(
-  		            loc.getBlock().getLocalBlock(),
-  		            ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
-  		        StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
-  		            datanodes[dnIdx].storage.getStorageID(), rdBlocks) };
-  		        rcvdAndDeletedBlocks = report;
-  		        registration = datanodes[dnIdx].dnRegistration;
-  		        consumer.execute(this);
-    		} else if(taskStage == 4){
-    			taskStage++;
-    			nameNodeProto.blockReceivedAndDeleted(registration, loc.getBlock().getBlockPoolId(),
-    		            rcvdAndDeletedBlocks);
-    			infoidx++;
-    			if(infoidx < loc.getLocations().length){
-    				taskStage = 3;
-    				producer.execute(this);
-    			} else {
-	    			infoidx = 0;
-	    			jdx++;
-	    			if(jdx < blocksPerFile){
-	    				taskStage = 2;
-	    				consumer.execute(this);
+    		try {
+	    		if(taskStage == 0){
+		            taskStage++;
+		            this.startCreate = Time.monotonicNow();
+		            checkLongestQueueSize();
+		            consumer.execute(this);
+	    		} else if(taskStage == 1){
+	    			taskStage++;
+	    			nameNodeProto.create(filename, FsPermission.getDefault(), clientname, 
+	    					new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)),
+	    		                  true, replication, BLOCK_SIZE, null);
+		            this.endCreate = Time.monotonicNow();
+		            createStat.addValue(endCreate - startCreate);
+	    			consumer.execute(this);
+	    		} else if(taskStage == 2){
+	    			taskStage++;
+	    			this.loc = nameNodeProto.addBlock(filename, clientname, prevBlock, null, INodeId.GRANDFATHER_INODE_ID, null);
+	    			producer.execute(this);
+	    		} else if(taskStage == 3){
+	    			taskStage++;
+	    			prevBlock = loc.getBlock();
+	    			DatanodeInfo dnInfo = loc.getLocations()[infoidx];
+	  		        int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getXferAddr());
+	  		        datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
+	  		        ReceivedDeletedBlockInfo[] rdBlocks = { new ReceivedDeletedBlockInfo(
+	  		            loc.getBlock().getLocalBlock(),
+	  		            ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
+	  		        StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
+	  		            datanodes[dnIdx].storage.getStorageID(), rdBlocks) };
+	  		        rcvdAndDeletedBlocks = report;
+	  		        registration = datanodes[dnIdx].dnRegistration;
+	  		        consumer.execute(this);
+	    		} else if(taskStage == 4){
+	    			taskStage++;
+	    			nameNodeProto.blockReceivedAndDeleted(registration, loc.getBlock().getBlockPoolId(),
+	    		            rcvdAndDeletedBlocks);
+	    			infoidx++;
+	    			if(infoidx < loc.getLocations().length){
+	    				taskStage = 3;
+	    				producer.execute(this);
 	    			} else {
-	    				taskStage++;
-	    				consumer.execute(this);
+		    			infoidx = 0;
+		    			jdx++;
+		    			if(jdx < blocksPerFile){
+		    				taskStage = 2;
+		    				consumer.execute(this);
+		    			} else {
+		    				taskStage++;
+		    				consumer.execute(this);
+		    			}
 	    			}
-    			}
-    		} else if(taskStage == 5){
-    			nameNodeProto.complete(filename, clientname, prevBlock,
-    		              INodeId.GRANDFATHER_INODE_ID);
+	    		} else if(taskStage == 5){
+	    			nameNodeProto.complete(filename, clientname, prevBlock,
+	    		              INodeId.GRANDFATHER_INODE_ID);
+	    		}
+    		} catch (IOException e) {
+    			e.printStackTrace();
     		}
     	}
     }
