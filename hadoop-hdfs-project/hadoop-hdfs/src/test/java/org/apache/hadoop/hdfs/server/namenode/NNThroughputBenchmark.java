@@ -1125,8 +1125,9 @@ public class NNThroughputBenchmark implements Tool {
     
     // for GEDA evaluation
     private int longestQueueSize = 0;
+    BlockingQueue<Runnable> producerQueue = new LinkedBlockingQueue<Runnable>();
     BlockingQueue<Runnable> consumerQueue = new LinkedBlockingQueue<Runnable>();
-    ExecutorService producer = null;
+    ExecutorService producer = new ThreadPoolExecutor(12, 12, 0L, TimeUnit.MILLISECONDS, producerQueue);
     ExecutorService consumer = new ThreadPoolExecutor(4, 4, 0L, TimeUnit.MILLISECONDS, consumerQueue);
     
     BlockReportStats(List<String> args) {
@@ -1206,7 +1207,8 @@ public class NNThroughputBenchmark implements Tool {
     	}
     	
     	public void checkLongestQueueSize(){
-    		LOG.info("longestQueueSize=" + longestQueueSize + " consumerQueueSize=" + consumerQueue.size() + " process=" + filename);
+    		LOG.info("longestQueueSize=" + longestQueueSize + " CQueueSize=" + consumerQueue.size() + " PQueueSize=" + producerQueue.size() + 
+    				" stage=" + taskStage +  " process=" + filename);
     		if(longestQueueSize < consumerQueue.size()){
     			longestQueueSize = consumerQueue.size();
     		}
@@ -1435,7 +1437,6 @@ public class NNThroughputBenchmark implements Tool {
         nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
             false);
         if(isGEDAmode){
-        	producer = Executors.newFixedThreadPool(12);
             nnStart = Time.monotonicNow();
 	        for(int idx=0; idx < nrFiles; idx++) {
 	          String fileName = nameGenerator.getNextFileName("ThroughputBench");
@@ -1445,8 +1446,8 @@ public class NNThroughputBenchmark implements Tool {
 	          LOG.info("Loaded file=" + fileName + " to Producer.");
 	        }
 	        
-	        while(consumerQueue.size() > 0){
-	        	Thread.sleep(500);
+	        while(consumerQueue.size() > 0 || producerQueue.size() > 0){
+	        	Thread.sleep(1000);
 	        }
 	        
 	        producer.shutdown();
