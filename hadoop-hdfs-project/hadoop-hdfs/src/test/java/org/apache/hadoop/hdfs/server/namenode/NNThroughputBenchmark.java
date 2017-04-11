@@ -1206,6 +1206,7 @@ public class NNThroughputBenchmark implements Tool {
     	}
     	
     	public void checkLongestQueueSize(){
+    		LOG.info("CurrentLongestQueueSize=" + longestQueueSize + " currentConsumerQueueSize=" + consumerQueue.size());
     		if(longestQueueSize < consumerQueue.size()){
     			longestQueueSize = consumerQueue.size();
     		}
