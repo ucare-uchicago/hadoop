@@ -1127,7 +1127,7 @@ public class NNThroughputBenchmark implements Tool {
     private int longestQueueSize = 0;
     BlockingQueue<Runnable> consumerQueue = new LinkedBlockingQueue<Runnable>();
     ExecutorService producer = null;
-    ExecutorService consumer = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, consumerQueue);
+    ExecutorService consumer = new ThreadPoolExecutor(4, 4, 0L, TimeUnit.MILLISECONDS, consumerQueue);
     
     BlockReportStats(List<String> args) {
       super();
@@ -1436,7 +1436,7 @@ public class NNThroughputBenchmark implements Tool {
         nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
             false);
         if(isGEDAmode){
-        	producer = Executors.newFixedThreadPool(15);
+        	producer = Executors.newFixedThreadPool(12);
             nnStart = Time.monotonicNow();
 	        for(int idx=0; idx < nrFiles; idx++) {
 	          String fileName = nameGenerator.getNextFileName("ThroughputBench");
