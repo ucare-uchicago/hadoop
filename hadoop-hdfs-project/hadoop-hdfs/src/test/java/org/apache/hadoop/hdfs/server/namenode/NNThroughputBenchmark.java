@@ -1210,8 +1210,6 @@ public class NNThroughputBenchmark implements Tool {
     	}
     	
     	public void checkLongestQueueSize(){
-    		LOG.info("longestQueueSize=" + longestQueueSize + " CQueueSize=" + consumerQueue.size() + " PQueueSize=" + producerQueue.size() + 
-    				" stage=" + taskStage +  " process=" + filename);
     		if(longestQueueSize < consumerQueue.size()){
     			longestQueueSize = consumerQueue.size();
     		}
@@ -1455,7 +1453,6 @@ public class NNThroughputBenchmark implements Tool {
 		          
 		          GedaFileTask task = new GedaFileTask(fileName, clientName);
 		          producer.execute(task);
-		          LOG.info("Loaded file=" + fileName + " to Producer.");
 		          queueCounter--;
 	          }
 	        }
