@@ -4,9 +4,9 @@
 p=14
 c=1
 
-if [ $# == 6 ]; then
-  p=$5
-  c=$6
+if [ $# == 2 ]; then
+  p=$1
+  c=$2
 fi
 
 ./runbench.sh 10000 4 40 4 $p $c > out-4.txt 2>&1

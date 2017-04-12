@@ -1140,7 +1140,7 @@ public class NNThroughputBenchmark implements Tool {
       config.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 3 * 60);
       parseArguments(args);
       // GEDA implementation : to match riza's implementation
-      queueCounter = getNumDatanodes() * 2;
+      queueCounter = getNumDatanodes() * 4;
       // adjust replication to the number of data-nodes
       this.replication = (short)Math.min(replication, getNumDatanodes());
     }
