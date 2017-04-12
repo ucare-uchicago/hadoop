@@ -1124,11 +1124,12 @@ public class NNThroughputBenchmark implements Tool {
     private Object mutex = new Object();
     
     // for GEDA evaluation
+    private int queueCounter = 0;
     private int longestQueueSize = 0;
-    BlockingQueue<Runnable> producerQueue = new LinkedBlockingQueue<Runnable>();
-    BlockingQueue<Runnable> consumerQueue = new LinkedBlockingQueue<Runnable>();
-    ThreadPoolExecutor producer = new ThreadPoolExecutor(14, 14, 0L, TimeUnit.MILLISECONDS, producerQueue);
-    ThreadPoolExecutor consumer = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, consumerQueue);
+    private BlockingQueue<Runnable> producerQueue = new LinkedBlockingQueue<Runnable>();
+    private BlockingQueue<Runnable> consumerQueue = new LinkedBlockingQueue<Runnable>();
+    private ThreadPoolExecutor producer = new ThreadPoolExecutor(14, 14, 0L, TimeUnit.MILLISECONDS, producerQueue);
+    private ThreadPoolExecutor consumer = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, consumerQueue);
     
     BlockReportStats(List<String> args) {
       super();
@@ -1138,6 +1139,8 @@ public class NNThroughputBenchmark implements Tool {
       // set heartbeat interval to 3 min, so that expiration were 40 min
       config.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 3 * 60);
       parseArguments(args);
+      // GEDA implementation : to match riza's implementation
+      queueCounter = getNumDatanodes() * 2;
       // adjust replication to the number of data-nodes
       this.replication = (short)Math.min(replication, getNumDatanodes());
     }
@@ -1274,6 +1277,7 @@ public class NNThroughputBenchmark implements Tool {
 		            checkLongestQueueSize();
 	    			nameNodeProto.complete(filename, clientname, prevBlock,
 	    		              INodeId.GRANDFATHER_INODE_ID);
+	    			queueCounter++;
 	    		}
     		} catch (IOException e) {
     			e.printStackTrace();
@@ -1443,12 +1447,17 @@ public class NNThroughputBenchmark implements Tool {
             false);
         if(isGEDAmode){
             nnStart = Time.monotonicNow();
-	        for(int idx=0; idx < nrFiles; idx++) {
-	          String fileName = nameGenerator.getNextFileName("ThroughputBench");
-	          
-	          GedaFileTask task = new GedaFileTask(fileName, clientName);
-	          producer.execute(task);
-	          LOG.info("Loaded file=" + fileName + " to Producer.");
+            int idx=0;
+	        while(idx < nrFiles) {
+	          idx++;
+	          if(queueCounter > 0){
+		          String fileName = nameGenerator.getNextFileName("ThroughputBench");
+		          
+		          GedaFileTask task = new GedaFileTask(fileName, clientName);
+		          producer.execute(task);
+		          LOG.info("Loaded file=" + fileName + " to Producer.");
+		          queueCounter--;
+	          }
 	        }
 	        
 	        while(consumerQueue.size() > 0 || producerQueue.size() > 0){
@@ -1503,6 +1512,8 @@ public class NNThroughputBenchmark implements Tool {
       LOG.info("blockPerFile = " + blocksPerFile);
       LOG.info("nrFiles      = " + nrFiles);
       LOG.info("poolSize     = " + writerPoolSize);
+      LOG.info("producer Thd = " + producer.getCorePoolSize());
+      LOG.info("consumer Thd = " + consumer.getCorePoolSize());
       LOG.info("--- create stats (ms) ---");
       LOG.info("creat min = " + createStat.getMin());
       LOG.info("creat max = " + createStat.getMax());
