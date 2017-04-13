@@ -47,7 +47,7 @@ public class TestDecommissionScale extends TestCase {
   static final int numDatanodes = 16;
   static final int numToDecom = 8;
   static final int fileSize = numToDecom*blockSize;
-  static final int numFiles = 100;
+  static final int numFiles = 10000; // prev 100
   static final int replicas = 3;
 
   class FileWriter implements Runnable {
@@ -174,7 +174,7 @@ public class TestDecommissionScale extends TestCase {
   }
 
   private void printDatanodeReport(DatanodeInfo[] info) {
-    System.out.println("-------------------------------------------------");
+    System.out.println("------------------REPORT-------------------------------");
     for (int i = 0; i < info.length; i++) {
       System.out.println(info[i].getDatanodeReport());
       System.out.println();
@@ -427,6 +427,7 @@ public class TestDecommissionScale extends TestCase {
       decommissionedNodes.addAll(downnodes);
 
       // write another files
+      /*
       Thread.sleep(3000);
       ExecutorService executor = Executors.newFixedThreadPool(100);
       for (int i=0; i<numFiles; i++) {
@@ -436,7 +437,8 @@ public class TestDecommissionScale extends TestCase {
       }
       executor.shutdown();
       while (!executor.isTerminated()) {}
-
+      */
+      
       waitNodesDecommissioned(fileSys, downnodes);
       //checkFile(fileSys, file1, replicas, downnode);
       for (Path file1:files)
