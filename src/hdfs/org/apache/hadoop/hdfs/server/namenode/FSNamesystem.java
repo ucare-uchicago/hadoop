@@ -282,6 +282,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   // precision of access times.
   private long accessTimePrecision = 0;
 
+  private long blockIterated = 0;
+
   /**
    * FSNamesystem constructor.
    */
@@ -3597,6 +3599,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     boolean status = false;
     Iterator<Block> decommissionBlocks = srcNode.getBlockIterator();
     while(decommissionBlocks.hasNext()) {
+      blockIterated++;
       Block block = decommissionBlocks.next();
       INode fileINode = blocksMap.getINode(block);
 
@@ -3757,6 +3760,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * heuristic to determine when a decommission is really over.
    */
   public synchronized void decommissionedDatanodeCheck() {
+    blockIterated = 0;
     long startTime = System.currentTimeMillis();
     for (Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator();
          it.hasNext();) {
@@ -3764,7 +3768,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       checkDecommissionStateInternal(node);
     }
     long estimatedTime = System.currentTimeMillis() - startTime;
-    FSNamesystem.LOG.warn(estimatedTime+" ms spent on decommissionedDatanodeCheck");
+    FSNamesystem.LOG.warn(estimatedTime+" ms spent on decommissionedDatanodeCheck, " +
+             blockIterated + " blocks iterated");
 
     if (this.decomHackEnabled) {
       try {

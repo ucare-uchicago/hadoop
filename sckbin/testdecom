@@ -2,6 +2,8 @@
 
 cd ..
 
+rm -rf build/test/data/
+
 # compile the code
 # ant jar
 ant jar-test
@@ -17,4 +19,5 @@ for jar in `ls build/*.jar`; do
   alljars="$alljars:$jar"
 done
 #java -cp $alljars org.apache.hadoop.conf.Configuration
-java -cp $alljars -Dlog4j.configuration="src/test/log4j.properties" junit.textui.TestRunner org.apache.hadoop.hdfs.TestDecommissionScale
+java -cp $alljars -Xmx64G -Dlog4j.configuration="src/test/log4j.properties" junit.textui.TestRunner org.apache.hadoop.hdfs.TestDecommissionScale
+#java -cp $alljars -Xmx64G -Dlog4j.configuration="src/test/log4j.properties" junit.textui.TestRunner org.apache.hadoop.hdfs.TestDecommission

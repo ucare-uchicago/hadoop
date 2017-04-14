@@ -44,10 +44,10 @@ import java.util.concurrent.Executors;
 public class TestDecommissionScale extends TestCase {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 1024;
-  static final int numDatanodes = 16;
-  static final int numToDecom = 8;
-  static final int fileSize = numToDecom*blockSize;
-  static final int numFiles = 100;
+  static final int numDatanodes = 256;
+  static final int numToDecom = 128;
+  static final int fileSize = numToDecom*10*blockSize;
+  static final int numFiles = 1000;
   static final int replicas = 3;
 
   class FileWriter implements Runnable {
@@ -110,6 +110,11 @@ public class TestDecommissionScale extends TestCase {
     rand.nextBytes(buffer);
     stm.write(buffer);
     stm.close();
+    //try {
+    //  Thread.sleep(1000);
+    //} catch (InterruptedException e) {
+      // nothing
+    //}
   }
   
   
@@ -407,7 +412,7 @@ public class TestDecommissionScale extends TestCase {
         writeFile(fileSys, file1, replicas);
         System.out.println("Created file decommission-"+i+".dat with " +
                            replicas + " replicas.");
-        //checkFile(fileSys, file1, replicas);
+        checkFile(fileSys, file1, replicas);
         //printFileLocations(fileSys, file1);
       }
 
@@ -417,7 +422,7 @@ public class TestDecommissionScale extends TestCase {
       }
 
       ((DistributedFileSystem) fileSys).refreshNodes();
-      cluster.getNameNode().namesystem.setDecommissionHack(true);
+      //cluster.getNameNode().namesystem.setDecommissionHack(true);
       //Thread.sleep(10000);
       allNodes = getLivingNodes(cluster.getNameNode(), conf,
                                 client, fileSys, localFileSys);
@@ -427,7 +432,7 @@ public class TestDecommissionScale extends TestCase {
       decommissionedNodes.addAll(downnodes);
 
       // write another files
-      Thread.sleep(3000);
+      /*Thread.sleep(3000);
       ExecutorService executor = Executors.newFixedThreadPool(100);
       for (int i=0; i<numFiles; i++) {
         Path file1 = new Path("inflight-"+i+".dat");
@@ -435,7 +440,7 @@ public class TestDecommissionScale extends TestCase {
         executor.execute(worker);
       }
       executor.shutdown();
-      while (!executor.isTerminated()) {}
+      while (!executor.isTerminated()) {}*/
 
       waitNodesDecommissioned(fileSys, downnodes);
       //checkFile(fileSys, file1, replicas, downnode);
