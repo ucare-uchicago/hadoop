@@ -1,0 +1,280 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+  <property>
+    <name>mapreduce.framework.name</name>
+    <value>yarn</value>
+    <description>Execution framework.</description>
+  </property>
+
+  <property>
+    <name>mapreduce.job.userlog.retain.hours</name>
+    <value>48</value>
+    <description>Max log retain duration.</description>
+  </property>
+
+  <property>
+    <name>mapreduce.map.log.level</name>
+    <value>DEBUG</value>
+  </property>
+
+  <property>
+    <name>mapreduce.reduce.log.level</name>
+    <value>INFO</value>
+  </property>
+
+  <property>
+    <name>mapreduce.client.output.filter</name>
+    <value>ALL</value>
+  </property>
+
+  <property>
+    <name>mapreduce.reduce.speculative</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>mapreduce.map.speculative</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>yarn.app.mapreduce.am.command-opts</name>
+    <value>-Xmx1024m</value>
+    <description>default: -Xmx1024m</description>
+  </property>
+
+  <property>
+    <name>mapred.child.java.opts</name>
+    <value>-Xmx200m</value>
+    <description>default: -Xmx200m</description>
+  </property>
+
+  <property>
+    <name>mapreduce.jobhistory.address</name>
+    <value>YARN_RM_IP:10020</value>
+    <description>MapReduce JobHistory Server IPC host:port</description>
+  </property>
+
+  <property>
+    <name>mapreduce.jobhistory.webapp.address</name>
+    <value>YARN_RM_IP:19888</value>
+    <description>MapReduce JobHistory Server Web UI host:port</description>
+  </property>
+
+  <!-- DEFAULT SPECULATOR TUNING BEGIN -->
+<!--  <property>
+    <name>mapreduce.job.speculative.speculative-cap-running-tasks</name>
+    <value>1</value>
+    <description>
+      The max percent (0-1) of running tasks that can be speculatively re-executed at any time. Default 0.1
+    </description>
+  </property>
+
+  <property>
+    <name>mapreduce.job.speculative.speculative-cap-total-tasks</name>
+    <value>1</value>
+    <description>
+      The max percent (0-1) of all tasks that can be speculatively re-executed at any time. Default 0.01.
+    </description>
+  </property>
+
+  <property>
+    <name>mapreduce.job.speculative.minimum-allowed-tasks</name>
+    <value>100</value>
+    <description>
+      The minimum allowed tasks that can be speculatively re-executed at any time. Default 10.
+    </description>
+  </property>
+
+  <property>
+    <name>mapreduce.job.speculative.retry-after-no-speculate</name>
+    <value>1000</value>
+    <description>
+      The waiting time(ms) to do next round of speculation if there is no task speculated in this round. Default 1000.
+    </description>
+  </property>
+
+  <property>
+    <name>mapreduce.job.speculative.retry-after-speculate</name>
+    <value>1000</value>
+    <description>
+      The waiting time(ms) to do next round of speculation if there are tasks speculated in this round. Default 15000.
+    </description>
+  </property>
+
+  <property>
+    <name>mapreduce.job.speculative.slowtaskthreshold</name>
+    <value>0.5</value>
+    <description>
+      The number of standard deviations by which a task's ave
+      progress-rates must be lower than the average of all running
+      tasks' for the task to be considered too slow. Default 1.0.
+    </description>
+  </property> -->
+
+  <property>
+    <name>yarn.app.mapreduce.am.job.task.estimator.class</name>
+    <value>org.apache.hadoop.mapreduce.v2.app.speculate.LegacyTaskRuntimeEstimator</value>
+    <description>Speculator's estimator class</description>
+  </property>
+
+  <property>
+    <name>yarn.app.mapreduce.am.job.speculator.class</name>
+    <!--<value>org.apache.hadoop.mapreduce.v2.app.speculate.CloningSpeculator</value>-->
+    <value>org.apache.hadoop.mapreduce.v2.app.speculate.UcareSeSpeculator</value>
+    <description>Speculator's estimator class</description>
+  </property>
+  <!-- DEFAULT SPECULATOR TUNING BEGIN -->
+
+  <!-- CUSTOM CONF BEGIN -->
+  <property>
+    <name>mapreduce.ucare_se.map.datanode.send_report</name>
+    <value>true</value>
+    <description>UCARE: report datanode being read to AM</description>
+  </property>
+
+  <property>
+    <name>mapreduce.ucare_se.map.datanode.read_new</name>
+    <value>true</value>
+    <description>UCARE: avoid read from same datanode as original task</description>
+  </property>
+
+  <property>
+    <name>mapreduce.ucare_se.map.path-speculation.enabled</name>
+    <value>true</value>
+    <description>UCARE: avoid read from same datanode as original task</description>
+  </property>
+
+  <property>
+    <name>mapreduce.ucare_se.map.path-speculation.threshold</name>
+    <value>0.1</value>
+    <description>UCARE: avoid read from same datanode as original task</description>
+  </property>
+
+  <property>
+    <name>mapreduce.ucare_se.map.path-speculation.fixed-threshold</name>
+    <value>0.0</value>
+    <description>UCARE: avoid read from same datanode as original task</description>
+  </property>
+
+  <property>
+    <name>mapreduce.ucare_se.map.avoid_single_source</name>
+    <value>true</value>
+    <description>UCARE: rare single read path mechanishm detection</description>
+  </property>
+
+  <property>
+    <name>mapreduce.ucare_se.map.avoid_single_worker</name>
+    <value>true</value>
+    <description>UCARE: rare single read path mechanishm detection</description>
+  </property>
+
+  <property>
+    <name>mapreduce.ucare_se.maximum_speculation_delay</name>
+    <value>60000</value>
+    <description>UCARE: maximum time (ms) to delay speculation for task that has not send status update</description>
+  </property>
+
+  <property>
+    <name>mapreduce.ucare_se.hack.map.progress_interval</name>
+    <value>3000</value>
+    <description>HACK: to adjust heartbeat interval in ms</description>
+  </property>
+
+  <property>
+    <name>mapreduce.experiment.slownode</name>
+    <value>pc001</value> <!-- to be replaced by sed -->
+    <description>UCARE: slow node host in emulab experiment</description>
+  </property>
+  <!-- CUSTOM CONF END -->
+
+  <!-- @Cesar: start -->
+  <property>
+    <name>mapreduce.experiment.enable_fetch_rate_speculation</name>
+    <value>true</value>
+    <description>UCARE: enable or disable fetch rate speculation for map tasks</description>
+  </property>
+
+  <property>
+    <name>mapreduce.experiment.fetch_rate_speculation_slow_thresshold</name>
+    <value>1</value>
+    <description>UCARE: when average of transfer rates on a node is bellow this (mbit),speculate</description>
+  </property>
+
+  <property>
+    <name>mapreduce.experiment.fetch_rate_speculation_progress_thresshold</name>
+    <value>0.7</value>
+    <description>UCARE: Dont speculate if the transfer progress is greater or equal than this</description>
+  </property>
+
+  <property>
+    <name>mapreduce.experiment.enable_fetcher_shutdown</name>
+    <value>true</value>
+    <description>UCARE: Shutdown fetcher thread after map relaunch?</description>
+  </property>
+
+  <property>
+    <name>mapreduce.experiment.write_rate_speculation_slow_thresshold</name>
+    <value>1</value>
+    <description>UCARE: Slow threshold for hdfs write</description>
+  </property>
+  
+  <property>
+    <name>mapreduce.experiment.enable_write_rate_speculation</name>
+    <value>true</value>
+    <description>UCARE: Enable hdfs write speculation</description>
+  </property>
+
+  <property>
+    <name>mapreduce.experiment.enable_single_reducer_speculation</name>
+    <value>true</value>
+    <description>UCARE: When the job only has one reduce, always speculate</description>
+  </property>  
+
+  <property>
+    <name>mapreduce.experiment.write_rate_speculation_maximum_report_delay_seconds</name>
+    <value>10.0</value>
+    <description>UCARE: Maximum delay for first pipeline write rate report</description>
+  </property>  
+  
+
+  <!-- @Cesar: end -->
+
+  <!-- @huanke: custom begin -->
+  <property>
+    <name>mapreduce.hack.fix-task-assignment</name>
+    <value>false</value>
+    <description>HACK: enable hack to fix node-to-task assignment in JobImpl</description>
+  </property>
+
+  <property>
+    <name>mapreduce.hack.map.fixed-location-scope</name>
+    <value></value>
+    <description>HACK: the alowed nodes for map task assignment</description>
+  </property>
+
+  <property>
+    <name>mapreduce.hack.reduce.fixed-location-scope</name>
+    <value></value>
+    <description>HACK: the alowed nodes for map task assignment</description>
+  </property>
+  <!-- @huanke: custom end -->
+
+</configuration>

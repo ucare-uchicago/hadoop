@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+
+  <property>
+    <name>fs.default.name</name>
+    <value>hdfs://node-0</value>
+  </property>
+
+  <property>
+    <name>hadoop.tmp.dir</name>
+    <value>/tmp/hadoop-ucare</value>
+  </property>
+
+  <property>
+    <name>dfs.hosts</name>
+    <value>/home/ubuntu/hadoop-2.7.1/psbin/ucare_se_conf/hadoop-0.19.1-dev-conf/slaves</value>
+  </property>
+
+  <property>
+    <name>dfs.hosts.exclude</name>
+    <value>/home/ubuntu/hadoop-2.7.1/psbin/ucare_se_conf/hadoop-0.19.1-dev-conf/decommission</value>
+  </property>
+
+  <property>
+    <name>dfs.block.size</name>
+    <value>1024</value>
+  </property>
+
+  <property>
+    <name>dfs.replication</name>
+    <value>3</value>
+  </property>
+
+</configuration>
