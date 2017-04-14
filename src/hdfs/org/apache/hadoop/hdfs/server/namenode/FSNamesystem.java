@@ -3469,11 +3469,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       //
       // all the blocks that reside on this node have to be 
       // replicated.
+      LOG.info("JEF: Moving blocks to other nodes at node=" + node.getName());
       Iterator<Block> decommissionBlocks = node.getBlockIterator();
       while(decommissionBlocks.hasNext()) {
         Block block = decommissionBlocks.next();
         updateNeededReplications(block, -1, 0);
       }
+      LOG.info("JEF: Finished moving blocks to other nodes from node:" + node.getName());
     }
   }
 
@@ -3691,11 +3693,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         DatanodeDescriptor node = it.next();
         // Check if not include.
         if (!inHostsList(node, null)) {
+          LOG.info("JEF: setDecommissioned()? at node=" + node.getName());
           node.setDecommissioned();  // case 2.
         } else {
           if (inExcludedHostsList(node, null)) {
             if (!node.isDecommissionInProgress() && 
                 !node.isDecommissioned()) {
+              LOG.info("JEF: startDecommission() on node=" + node.getName());
               startDecommission(node);   // case 3.
             }
           } else {

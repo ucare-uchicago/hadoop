@@ -253,6 +253,7 @@ public class TestDecommissionScale extends TestCase {
     ArrayList<String> nodes = new ArrayList<String>(decommissionedNodes);
     nodes.addAll(toDecom);
     writeConfigFile(localFileSys, excludeFile, nodes);
+    System.out.println("JEF: TestDecommissionScale calls decommissionNodes()");
     namenode.namesystem.refreshNodes(conf);
     return toDecom;
   }
