@@ -43,11 +43,11 @@ import java.util.concurrent.Executors;
  */
 public class TestDecommissionScale extends TestCase {
   static final long seed = 0xDEADBEEFL;
-  static final int blockSize = 1024;
+  static final int blockSize = 102400;
   static final int numDatanodes = 16;
   static final int numToDecom = 8;
   static final int fileSize = numToDecom*blockSize;
-  static final int numFiles = 10000; // prev 100
+  static final int numFiles = 100; // prev 100
   static final int replicas = 3;
 
   class FileWriter implements Runnable {
