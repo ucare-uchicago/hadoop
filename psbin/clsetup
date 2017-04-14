@@ -10,7 +10,7 @@ do
   ssh -t $HOSTNAME_PREFIX$i \
    'sudo rm -r /tmp/hadoop-ucare /mnt/extra/dfs-ucare; \
     sudo mkdir -p /tmp/hadoop-ucare /mnt/extra/dfs-ucare; \
-    sudo chgrp -R ubuntu /tmp/hadoop-ucare /mnt/extra;
+    sudo chown -R ubuntu /tmp/hadoop-ucare /mnt/extra;
     sudo chmod -R 774 /tmp/hadoop-ucare /mnt/extra;'  >> /tmp/$USER-clsetup.log
 done
 
