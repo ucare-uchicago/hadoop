@@ -43,11 +43,11 @@ import java.util.concurrent.Executors;
  */
 public class TestDecommissionScale extends TestCase {
   static final long seed = 0xDEADBEEFL;
-  static final int blockSize = 102400;
+  static final int blockSize = 1024;
   static final int numDatanodes = 16;
   static final int numToDecom = 8;
-  static final int fileSize = numToDecom*blockSize;
-  static final int numFiles = 100; // prev 100
+  static final int fileSize = numToDecom * 10 * blockSize;
+  static final int numFiles = 1000; // prev 100
   static final int replicas = 3;
 
   class FileWriter implements Runnable {
@@ -407,7 +407,7 @@ public class TestDecommissionScale extends TestCase {
         writeFile(fileSys, file1, replicas);
         System.out.println("Created file decommission-"+i+".dat with " +
                            replicas + " replicas.");
-        //checkFile(fileSys, file1, replicas);
+        checkFile(fileSys, file1, replicas);
         //printFileLocations(fileSys, file1);
       }
 
