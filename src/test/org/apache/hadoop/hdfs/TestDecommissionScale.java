@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.concurrent.TimeUnit;
 import java.net.*;
 import java.lang.InterruptedException;
 import org.apache.hadoop.conf.Configuration;
@@ -44,8 +45,8 @@ import java.util.concurrent.Executors;
 public class TestDecommissionScale extends TestCase {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 1024;
-  static final int numDatanodes = 256;
-  static final int numToDecom = 128;
+  static final int numDatanodes = 512;
+  static final int numToDecom = 256;
   static final int fileSize = numToDecom*10*blockSize;
   static final int numFiles = 1000;
   static final int replicas = 3;
@@ -65,6 +66,7 @@ public class TestDecommissionScale extends TestCase {
         writeFile(fileSys, filePath, replicas);
         System.out.println("Created file "+filePath.toString()+" with " +
                            replicas + " replicas.");
+        checkFile(fileSys, filePath, replicas);
       } catch (IOException ex) {
         System.out.println(filePath.toString()+" failed to be written: "+ex.getMessage());
       }
@@ -407,14 +409,26 @@ public class TestDecommissionScale extends TestCase {
                                  client, fileSys, localFileSys);
 
       ArrayList<Path> files = new ArrayList<Path>();
+
+      ExecutorService executor = Executors.newFixedThreadPool(32);
       for (int i=0; i<numFiles; i++) {
+        Path file1 = new Path("inflight-"+i+".dat");
+        Runnable worker = new FileWriter(fileSys,file1);
+        executor.execute(worker);
+      }
+      executor.shutdown();
+      while (!executor.isTerminated()) {
+        executor.awaitTermination(1,TimeUnit.HOURS);
+      }
+
+      /*for (int i=0; i<numFiles; i++) {
         Path file1 = new Path("decommission-"+i+".dat");
         writeFile(fileSys, file1, replicas);
         System.out.println("Created file decommission-"+i+".dat with " +
                            replicas + " replicas.");
         checkFile(fileSys, file1, replicas);
         //printFileLocations(fileSys, file1);
-      }
+      }*/
 
       for (MiniDFSCluster.DataNodeProperties dp: paused) {
         System.out.println("Restarting datanode "+dp.datanode.dnRegistration.getName()+" ...");
@@ -430,17 +444,6 @@ public class TestDecommissionScale extends TestCase {
       downnodes = decommissionNodes(cluster.getNameNode(), conf,
                                     client, fileSys, localFileSys, downnodes);
       decommissionedNodes.addAll(downnodes);
-
-      // write another files
-      /*Thread.sleep(3000);
-      ExecutorService executor = Executors.newFixedThreadPool(100);
-      for (int i=0; i<numFiles; i++) {
-        Path file1 = new Path("inflight-"+i+".dat");
-        Runnable worker = new FileWriter(fileSys,file1);
-        executor.execute(worker);
-      }
-      executor.shutdown();
-      while (!executor.isTerminated()) {}*/
 
       waitNodesDecommissioned(fileSys, downnodes);
       //checkFile(fileSys, file1, replicas, downnode);
