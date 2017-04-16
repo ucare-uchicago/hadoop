@@ -3693,7 +3693,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         DatanodeDescriptor node = it.next();
         // Check if not include.
         if (!inHostsList(node, null)) {
-          LOG.info("JEF: setDecommissioned()? at node=" + node.getName());
           node.setDecommissioned();  // case 2.
         } else {
           if (inExcludedHostsList(node, null)) {
