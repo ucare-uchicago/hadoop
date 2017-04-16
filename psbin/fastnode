@@ -1,0 +1,10 @@
+#!/bin/bash
+
+. cluster_topology.sh
+
+slownode="${HOSTNAME_PREFIX}$1"
+
+echo "restore $slownode"
+
+#ssh -n $slownode "sudo $PSBIN/fast_machine.sh"
+limit_clear.sh

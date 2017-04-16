@@ -1,0 +1,14 @@
+#!/bin/bash
+
+. cluster_topology.sh
+
+echo "Resetting cluster" > /tmp/$USER-clreset.log
+
+for i in `seq 0 $MAX_NODE`;
+do
+  echo "$HOSTNAME_PREFIX$i" >> /tmp/$USER-clreset.log
+  ssh $HOSTNAME_PREFIX$i \
+   'sudo rm -rf /tmp/hadoop-ucare/* ; rm -rf /mnt/extra/dfs-ucare/* ;'  >> /tmp/$USER-clreset.log
+done
+
+cat /tmp/$USER-clreset.log
