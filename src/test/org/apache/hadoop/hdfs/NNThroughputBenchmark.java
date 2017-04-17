@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -685,6 +686,9 @@ public class NNThroughputBenchmark {
     DatanodeRegistration dnRegistration;
     Block[] blocks;
     int nrBlocks; // actual number of blocks
+    
+    // jef: for GEDA
+    boolean acceptBlocks;
 
     /**
      * Get data-node in the form 
@@ -705,6 +709,7 @@ public class NNThroughputBenchmark {
       dnRegistration = new DatanodeRegistration(getNodeName(dnIdx));
       this.blocks = new Block[blockCapacity];
       this.nrBlocks = 0;
+      this.acceptBlocks = true;
     }
 
     String getName() {
@@ -789,6 +794,11 @@ public class NNThroughputBenchmark {
         }
       }
       return blocks.length;
+    }
+    
+    // jef: for GEDA
+    public void setAcceptBlocks(boolean flag){
+    	this.acceptBlocks = flag;
     }
   }
 
@@ -886,12 +896,77 @@ public class NNThroughputBenchmark {
         datanodes[idx].formBlockReport();
       }
     }
+    
+    ArrayList<TinyDatanode> generateInputsForGeda(int[] ignore, int numToDecom) throws IOException {
+        int nrDatanodes = getNumDatanodes();
+        int nrBlocks = (int)Math.ceil((double)blocksPerReport * nrDatanodes 
+                                      / replication);
+        int nrFiles = (int)Math.ceil((double)nrBlocks / blocksPerFile);
+        datanodes = new TinyDatanode[nrDatanodes];
+        // create data-nodes
+        String prevDNName = "";
+        for(int idx=0; idx < nrDatanodes; idx++) {
+          datanodes[idx] = new TinyDatanode(idx, blocksPerReport);
+          datanodes[idx].register();
+          assert datanodes[idx].getName().compareTo(prevDNName) > 0
+            : "Data-nodes must be sorted lexicographically.";
+          datanodes[idx].sendHeartbeat();
+          prevDNName = datanodes[idx].getName();
+        }
+        
+        // jef: stop N datanodes
+        ArrayList<TinyDatanode> aliveNodes = new ArrayList<TinyDatanode>();
+        int totalStoppedNodes = 0;
+        for (int i=nrDatanodes-1; i>=datanodes.length ; i--) {
+        	if(totalStoppedNodes < numToDecom){
+	        	LOG.info("Stopping datanode " + datanodes[i].getName() + " ...");
+	        	datanodes[i].setAcceptBlocks(false);
+	        	totalStoppedNodes++;
+        	} else {
+        		aliveNodes.add(datanodes[i]);
+        	}
+        }
+
+        // create files 
+        LOG.info("Creating " + nrFiles + " with " + blocksPerFile + " blocks each.");
+        FileNameGenerator nameGenerator;
+        nameGenerator = new FileNameGenerator(getBaseDir(), 100);
+        String clientName = getClientName(007);
+        nameNode.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
+        for(int idx=0; idx < nrFiles; idx++) {
+          String fileName = nameGenerator.getNextFileName("ThroughputBench");
+          nameNode.create(fileName, FsPermission.getDefault(),
+                          clientName, true, replication, BLOCK_SIZE);
+          addBlocks(fileName, clientName);
+          nameNode.complete(fileName, clientName);
+        }
+        // prepare block reports
+        for(int idx=0; idx < nrDatanodes; idx++) {
+          datanodes[idx].formBlockReport();
+        }
+        
+        // jef: start N datanodes
+        for (int i=nrDatanodes-1; i>=numToDecom ; i--) {
+        	LOG.info("Starting datanode " + datanodes[i].getName() + " ...");
+        	datanodes[i].setAcceptBlocks(true);
+        }
+        
+        return aliveNodes;
+      }
 
     private void addBlocks(String fileName, String clientName) throws IOException {
       for(int jdx = 0; jdx < blocksPerFile; jdx++) {
         LocatedBlock loc = nameNode.addBlock(fileName, clientName);
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
+          // jef: for GEDA
+          while(!datanodes[dnIdx].acceptBlocks){
+        	  LOG.info("Datanode-" + datanodes[dnIdx].getName() + " is stopped for now.");
+        	  dnIdx++;
+        	  if(dnIdx >= datanodes.length){
+        		  dnIdx = 0;
+        	  }
+          }
           datanodes[dnIdx].addBlock(loc.getBlock());
           nameNode.blockReceived(
               datanodes[dnIdx].dnRegistration, 
@@ -1007,7 +1082,10 @@ public class NNThroughputBenchmark {
 
     void generateInputs(int[] ignore) throws IOException {
       // start data-nodes; create a bunch of files; generate block reports.
-      blockReportObject.generateInputs(ignore);
+//      blockReportObject.generateInputs(ignore);
+      // jef: for GEDA
+      ArrayList<TinyDatanode> aliveNodes = blockReportObject.generateInputsForGeda(ignore, nodesToDecommission);
+      
       // stop replication monitor
       nameNode.namesystem.replthread.interrupt();
       try {
@@ -1021,7 +1099,9 @@ public class NNThroughputBenchmark {
         blockReportObject.executeOp(idx, 0, null);
       }
       // decommission data-nodes
-      decommissionNodes();
+//      decommissionNodes();
+      // jef: for GEDA
+      decommissionNodesWithGEDA(aliveNodes);
       // set node replication limit
       nameNode.namesystem.setNodeReplicationLimit(nodeReplicationLimit);
     }
@@ -1041,6 +1121,21 @@ public class NNThroughputBenchmark {
       }
       excludeFile.close();
       nameNode.refreshNodes();
+    }
+    
+    private void decommissionNodesWithGEDA(ArrayList<TinyDatanode> aliveNodes) throws IOException {
+    	String excludeFN = config.get("dfs.hosts.exclude", "exclude");
+    	FileOutputStream excludeFile = new FileOutputStream(excludeFN);
+    	excludeFile.getChannel().truncate(0L);
+    	numDecommissionedBlocks = 0;
+	    for(TinyDatanode dn : aliveNodes) {
+	      numDecommissionedBlocks += dn.nrBlocks;
+	      excludeFile.write(dn.getName().getBytes());
+	      excludeFile.write('\n');
+	      LOG.info("Datanode " + dn.getName() + " is decommissioned.");
+	    }
+	    excludeFile.close();
+	    nameNode.refreshNodes();
     }
 
     /**
