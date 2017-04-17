@@ -3116,6 +3116,7 @@ class FSNamesystem implements FSConstants {
       private DatanodeDescriptor[] getPipeline(
           DatanodeDescriptor writer,
           List<DatanodeDescriptor> nodes ) {
+        long start = System.currentTimeMillis();
         int numOfNodes = nodes.size();
         DatanodeDescriptor[] results = new DatanodeDescriptor[numOfNodes];
         if( numOfNodes==0 ) return results;
@@ -3146,6 +3147,8 @@ class FSNamesystem implements FSConstants {
             writer = shortestNode;
           }
         }
+        long time = System.currentTimeMillis() - start;
+        LOG.warn(time + " ms spent on getPipeline()");
         return nodes.toArray( results );
       }
       
