@@ -350,6 +350,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     String infoHost = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
+    LOG.info("JEF: infoHost=" + infoHost + " tmpInfoPort=" + tmpInfoPort);
     this.infoServer = new HttpServer("hdfs", infoHost, tmpInfoPort, 
         tmpInfoPort == 0, conf);
     InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(
