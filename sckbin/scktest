@@ -6,7 +6,7 @@ cd ..
 # ant jar
 # ant jar-test
 
-alljars=""
+alljars=$CLASSPATH
 for jar in `ls lib/*.jar`; do
   alljars="$alljars:$jar"
 done
@@ -16,9 +16,9 @@ done
 for jar in `ls build/*.jar`; do
   alljars="$alljars:$jar"
 done
+alljars="$alljars:/tmp/sck-hadoop-4061/conf"
 #java -cp $alljars org.apache.hadoop.conf.Configuration
 #java -cp $alljars -Dlog4j.configuration="src/test/log4j.properties" junit.textui.TestRunner org.apache.hadoop.hdfs.NNThroughputBenchmark -datanodes 32 -nodesToDecommission 16 -totalBlocks 1024 -replication 3
 
 clsetup
-hdfs namenode -format -nonInteractive
-hadoop jar $alljar org.apache.hadoop.hdfs.server.namenode.NNThroughputBenchmark -op replication
+hadoop -cp $alljars org.apache.hadoop.hdfs.NNThroughputBenchmark -op replication

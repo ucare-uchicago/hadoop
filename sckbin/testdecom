@@ -3,8 +3,8 @@
 cd ..
 
 # compile the code
-# ant jar
-ant jar-test
+ant jar
+#ant jar-test
 
 alljars=""
 for jar in `ls lib/*.jar`; do
