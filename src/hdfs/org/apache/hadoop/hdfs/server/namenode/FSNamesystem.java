@@ -344,13 +344,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       dnsToSwitchMapping.resolve(new ArrayList<String>(hostsReader.getHosts()));
     }
 
+    /*
     String infoAddr = 
       NetUtils.getServerAddress(conf, "dfs.info.bindAddress", 
                                 "dfs.info.port", "dfs.http.address");
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     String infoHost = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
-    LOG.info("JEF: infoHost=" + infoHost + " tmpInfoPort=" + tmpInfoPort);
     this.infoServer = new HttpServer("hdfs", infoHost, tmpInfoPort, 
         tmpInfoPort == 0, conf);
     InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(
@@ -383,6 +383,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.infoPort = this.infoServer.getPort();
     conf.set("dfs.http.address", infoHost + ":" + infoPort);
     LOG.info("Web-server up at: " + infoHost + ":" + infoPort);
+    */
   }
 
   public static Collection<File> getNamespaceDirs(Configuration conf) {
