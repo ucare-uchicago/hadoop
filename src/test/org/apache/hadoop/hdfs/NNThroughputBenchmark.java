@@ -907,6 +907,7 @@ public class NNThroughputBenchmark {
         LOG.info("STATUS: \n" + debug);
         
         datanodes = new TinyDatanode[nrDatanodes];
+        ArrayList<TinyDatanode> aliveNodes = new ArrayList<TinyDatanode>();
         // create N data-nodes
         String prevDNName = "";
         for(int idx=0; idx < nrDatanodes/2; idx++) {
@@ -916,6 +917,7 @@ public class NNThroughputBenchmark {
             : "Data-nodes must be sorted lexicographically.";
           datanodes[idx].sendHeartbeat();
           prevDNName = datanodes[idx].getName();
+          aliveNodes.add(datanodes[idx]);
         }
         
         // jef: stop N datanodes
