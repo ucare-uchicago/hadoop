@@ -821,8 +821,8 @@ public class NNThroughputBenchmark {
 
     BlockReportStats(List<String> args) {
       super();
-      this.blocksPerReport = 100;
-      this.blocksPerFile = 10;
+      this.blocksPerReport = 1024; // previously 100
+      this.blocksPerFile = 30000; // previously 10
       // set heartbeat interval to 3 min, so that expiration were 40 min
       config.setLong("dfs.heartbeat.interval", 3 * 60);
       parseArguments(args);
@@ -899,7 +899,7 @@ public class NNThroughputBenchmark {
     
     ArrayList<TinyDatanode> generateInputsForGeda(int[] ignore, int numToDecom) throws IOException {
         int nrDatanodes = getNumDatanodes();
-        int nrBlocks = (int)Math.ceil((double)blocksPerReport * nrDatanodes 
+        int nrBlocks = (int)Math.ceil((double)blocksPerReport * numToDecom 
                                       / replication);
         int nrFiles = (int)Math.ceil((double)nrBlocks / blocksPerFile);
         datanodes = new TinyDatanode[nrDatanodes];
@@ -915,14 +915,14 @@ public class NNThroughputBenchmark {
         }
         
         // jef: stop N datanodes
+        LOG.info("JEF: stop some nodes and record the alive nodes");
         ArrayList<TinyDatanode> aliveNodes = new ArrayList<TinyDatanode>();
-        int totalStoppedNodes = 0;
-        for (int i=nrDatanodes-1; i>=datanodes.length ; i--) {
-        	if(totalStoppedNodes < numToDecom){
+        for (int i=0; i>=nrDatanodes ; i++) {
+        	if(i < numToDecom){
 	        	LOG.info("Stopping datanode " + datanodes[i].getName() + " ...");
 	        	datanodes[i].setAcceptBlocks(false);
-	        	totalStoppedNodes++;
         	} else {
+	        	LOG.info("Datanode " + datanodes[i].getName() + " is alive...");
         		aliveNodes.add(datanodes[i]);
         	}
         }
@@ -946,6 +946,11 @@ public class NNThroughputBenchmark {
         }
         
         // jef: start N datanodes
+        try {
+        	Thread.sleep(10000);
+        } catch (Exception ex){
+        	ex.printStackTrace();
+        }
         for (int i=nrDatanodes-1; i>=numToDecom ; i--) {
         	LOG.info("Starting datanode " + datanodes[i].getName() + " ...");
         	datanodes[i].setAcceptBlocks(true);
