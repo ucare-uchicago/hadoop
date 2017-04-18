@@ -267,7 +267,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   ReplicationTargetChooser replicator;
 
   private HostsFileReader hostsReader; 
-  private Daemon dnthread = null;
+  public Daemon dnthread = null;
 
   private long maxFsObjects = 0;          // maximum number of fs objects
 
@@ -328,6 +328,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     this.hostsReader = new HostsFileReader(conf.get("dfs.hosts",""),
                                            conf.get("dfs.hosts.exclude",""));
+    LOG.info("Starting DecommissionedMonitor..");
     this.dnthread = new Daemon(new DecommissionedMonitor());
     dnthread.start();
 

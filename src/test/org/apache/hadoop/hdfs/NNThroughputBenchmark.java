@@ -687,9 +687,6 @@ public class NNThroughputBenchmark {
     Block[] blocks;
     int nrBlocks; // actual number of blocks
     
-    // jef: for GEDA
-    boolean acceptBlocks;
-
     /**
      * Get data-node in the form 
      * <host name> : <port>
@@ -709,7 +706,6 @@ public class NNThroughputBenchmark {
       dnRegistration = new DatanodeRegistration(getNodeName(dnIdx));
       this.blocks = new Block[blockCapacity];
       this.nrBlocks = 0;
-      this.acceptBlocks = true;
     }
 
     String getName() {
@@ -796,10 +792,6 @@ public class NNThroughputBenchmark {
       return blocks.length;
     }
     
-    // jef: for GEDA
-    public void setAcceptBlocks(boolean flag){
-    	this.acceptBlocks = flag;
-    }
   }
 
   /**
@@ -920,21 +912,6 @@ public class NNThroughputBenchmark {
           aliveNodes.add(datanodes[idx]);
         }
         
-        // jef: stop N datanodes
-        /*
-        LOG.info("JEF: stop some nodes and record the alive nodes");
-        ArrayList<TinyDatanode> aliveNodes = new ArrayList<TinyDatanode>();
-        for (int i=0; i<nrDatanodes ; i++) {
-        	if(i < numToDecom){
-	        	LOG.info("Stopping datanode " + datanodes[i].getName() + " ...");
-	        	datanodes[i].setAcceptBlocks(false);
-        	} else {
-	        	LOG.info("Datanode " + datanodes[i].getName() + " is alive...");
-        		aliveNodes.add(datanodes[i]);
-        	}
-        }
-        */
-
         // create files 
         LOG.info("Creating " + nrFiles + " files with " + blocksPerFile + " blocks each.");
         FileNameGenerator nameGenerator;
@@ -969,12 +946,6 @@ public class NNThroughputBenchmark {
         } catch (Exception ex){
         	ex.printStackTrace();
         }
-        /*
-        for (int i=nrDatanodes-1; i>=numToDecom ; i--) {
-        	LOG.info("Starting datanode " + datanodes[i].getName() + " ...");
-        	datanodes[i].setAcceptBlocks(true);
-        }
-        */
         
         return aliveNodes;
       }
@@ -984,15 +955,6 @@ public class NNThroughputBenchmark {
         LocatedBlock loc = nameNode.addBlock(fileName, clientName);
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
-          // jef: for GEDA
-          /*
-          while(!datanodes[dnIdx].acceptBlocks){
-        	  dnIdx++;
-        	  if(dnIdx >= datanodes.length){
-        		  dnIdx = 0;
-        	  }
-          }
-          */
           datanodes[dnIdx].addBlock(loc.getBlock());
           nameNode.blockReceived(
               datanodes[dnIdx].dnRegistration, 
@@ -1113,8 +1075,10 @@ public class NNThroughputBenchmark {
       
       // stop replication monitor
       nameNode.namesystem.replthread.interrupt();
+      nameNode.namesystem.dnthread.interrupt();
       try {
         nameNode.namesystem.replthread.join();
+        nameNode.namesystem.dnthread.join();
       } catch(InterruptedException ei) {
         return;
       }
