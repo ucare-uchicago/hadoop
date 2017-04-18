@@ -153,7 +153,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   
   /**
    */
-  void updateHeartbeat(long capacity, long remaining, int xceiverCount) {
+  public void updateHeartbeat(long capacity, long remaining, int xceiverCount) {
     this.capacity = capacity;
     this.remaining = remaining;
     this.lastUpdate = System.currentTimeMillis();

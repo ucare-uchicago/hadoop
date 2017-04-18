@@ -49,7 +49,7 @@ import javax.servlet.http.HttpServletResponse;
  * 4)  machine --> blocklist (inverted #2)
  * 5)  LRU cache of updated-heartbeat machines
  ***************************************************/
-class FSNamesystem implements FSConstants {
+public class FSNamesystem implements FSConstants {
     public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.FSNamesystem");
 
     //
@@ -201,9 +201,9 @@ class FSNamesystem implements FSConstants {
     private SafeModeInfo safeMode;  // safe mode information
     
     // datanode networktoplogy
-    NetworkTopology clusterMap = new NetworkTopology();
+    public NetworkTopology clusterMap = new NetworkTopology();
     // for block replicas placement
-    ReplicationTargetChooser replicator = new ReplicationTargetChooser();
+    public ReplicationTargetChooser replicator = new ReplicationTargetChooser();
 
     private HostsFileReader hostsReader; 
     private Daemon dnthread = null;
@@ -2728,7 +2728,7 @@ class FSNamesystem implements FSConstants {
      * @author hairong
      *
      */
-    class ReplicationTargetChooser {
+    public class ReplicationTargetChooser {
       private class NotEnoughReplicasException extends Exception {
         NotEnoughReplicasException( String msg ) {
           super( msg );
@@ -2747,16 +2747,20 @@ class FSNamesystem implements FSConstants {
        * @return array of DatanodeDescriptor instances chosen as targets
        * and sorted as a pipeline.
        */
-      DatanodeDescriptor[] chooseTarget(int numOfReplicas,
+      public DatanodeDescriptor[] chooseTarget(int numOfReplicas,
           DatanodeDescriptor writer,
           List<DatanodeDescriptor> excludedNodes,
           long blocksize ) {
+          long start = System.currentTimeMillis();
         if( excludedNodes == null) {
           excludedNodes = new ArrayList<DatanodeDescriptor>();
         }
         
-        return chooseTarget(numOfReplicas, writer, 
+        DatanodeDescriptor[] result = chooseTarget(numOfReplicas, writer, 
             new ArrayList<DatanodeDescriptor>(), excludedNodes, blocksize);
+        long elapse = System.currentTimeMillis() - start;
+        System.out.println("chooseTarget elapse time = " + elapse);
+        return result;
       }
       
       /**

@@ -1,0 +1,137 @@
+From 0f82ea73a44c345640b4a1b2bfa98b4c0b53793d Mon Sep 17 00:00:00 2001
+From: Tanakorn L <tanakorn@cs.uchicago.edu>
+Date: Mon, 27 Feb 2017 17:06:46 -0600
+Subject: [PATCH] Add my testing code that calls chooseTarget method directly
+
+---
+ .../uchicago/cs/ucare/scale/ChooseTargetTest.java  | 60 ++++++++++++++++++++++
+ .../org/apache/hadoop/dfs/DatanodeDescriptor.java  |  2 +-
+ src/java/org/apache/hadoop/dfs/FSNamesystem.java   | 10 ++--
+ 3 files changed, 66 insertions(+), 6 deletions(-)
+ create mode 100644 src/java/edu/uchicago/cs/ucare/scale/ChooseTargetTest.java
+
+diff --git a/src/java/edu/uchicago/cs/ucare/scale/ChooseTargetTest.java b/src/java/edu/uchicago/cs/ucare/scale/ChooseTargetTest.java
+new file mode 100644
+index 0000000..2da1828
+--- /dev/null
++++ b/src/java/edu/uchicago/cs/ucare/scale/ChooseTargetTest.java
+@@ -0,0 +1,60 @@
++package edu.uchicago.cs.ucare.scale;
++
++import java.io.IOException;
++
++import org.apache.hadoop.conf.Configuration;
++import org.apache.hadoop.dfs.DatanodeDescriptor;
++import org.apache.hadoop.dfs.DatanodeID;
++import org.apache.hadoop.dfs.FSConstants;
++import org.apache.hadoop.dfs.FSNamesystem;
++import org.apache.hadoop.dfs.NameNode;
++import org.apache.hadoop.net.NetworkTopology;
++
++public class ChooseTargetTest {
++
++    public static final int BLOCK_SIZE = 1024;
++    public static final Configuration CONF = new Configuration();
++    public static NetworkTopology cluster;
++    public static NameNode namenode;
++    public static FSNamesystem.ReplicationTargetChooser replicator;
++    public static DatanodeDescriptor dataNodes[];
++
++    public static void main(String[] args) {
++        if (args.length < 1) {
++            System.err.println("Please enter number of datanodes");
++            System.exit(0);
++        }
++        int numDatanodes = Integer.parseInt(args[0]);
++        try {
++            CONF.set("fs.default.name", "localhost:8020");
++            NameNode.format(CONF);
++            namenode = new NameNode(CONF);
++        } catch (IOException e) {
++            e.printStackTrace();
++        }
++        FSNamesystem fsNamesystem = FSNamesystem.getFSNamesystem();
++        replicator = fsNamesystem.replicator;
++        cluster = fsNamesystem.clusterMap;
++        dataNodes = new DatanodeDescriptor[numDatanodes];
++        for (int i = 0; i < numDatanodes; i++) {
++            String hostname = "h" + i;
++            String networkLoc = "/defaultrack";
++            DatanodeDescriptor datanode = new DatanodeDescriptor(new DatanodeID(hostname + ":5020", "0", -1), networkLoc);
++            cluster.add(datanode);
++            dataNodes[i] = datanode;
++        }
++        for (int i = 0; i < numDatanodes; i++) {
++            dataNodes[i].updateHeartbeat(2 * FSConstants.MIN_BLOCKS_FOR_WRITE
++                    * BLOCK_SIZE, 2 * FSConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, 0);
++        }
++        DatanodeDescriptor[] targets;
++        long start = System.currentTimeMillis();
++//        targets = replicator.chooseTarget(numDatanodes, dataNodes[0], null, BLOCK_SIZE);
++        for (int i = 0; i < numDatanodes; i++) {
++            targets = replicator.chooseTarget(numDatanodes, dataNodes[i], null, BLOCK_SIZE);
++        }
++        long elapse = System.currentTimeMillis() - start;
++        System.out.println(elapse / numDatanodes);
++    }
++
++}
+diff --git a/src/java/org/apache/hadoop/dfs/DatanodeDescriptor.java b/src/java/org/apache/hadoop/dfs/DatanodeDescriptor.java
+index c7b7e64..c413f02 100644
+--- a/src/java/org/apache/hadoop/dfs/DatanodeDescriptor.java
++++ b/src/java/org/apache/hadoop/dfs/DatanodeDescriptor.java
+@@ -153,7 +153,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
+   
+   /**
+    */
+-  void updateHeartbeat(long capacity, long remaining, int xceiverCount) {
++  public void updateHeartbeat(long capacity, long remaining, int xceiverCount) {
+     this.capacity = capacity;
+     this.remaining = remaining;
+     this.lastUpdate = System.currentTimeMillis();
+diff --git a/src/java/org/apache/hadoop/dfs/FSNamesystem.java b/src/java/org/apache/hadoop/dfs/FSNamesystem.java
+index f720659..85c324d 100644
+--- a/src/java/org/apache/hadoop/dfs/FSNamesystem.java
++++ b/src/java/org/apache/hadoop/dfs/FSNamesystem.java
+@@ -49,7 +49,7 @@ import javax.servlet.http.HttpServletResponse;
+  * 4)  machine --> blocklist (inverted #2)
+  * 5)  LRU cache of updated-heartbeat machines
+  ***************************************************/
+-class FSNamesystem implements FSConstants {
++public class FSNamesystem implements FSConstants {
+     public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.FSNamesystem");
+ 
+     //
+@@ -201,9 +201,9 @@ class FSNamesystem implements FSConstants {
+     private SafeModeInfo safeMode;  // safe mode information
+     
+     // datanode networktoplogy
+-    NetworkTopology clusterMap = new NetworkTopology();
++    public NetworkTopology clusterMap = new NetworkTopology();
+     // for block replicas placement
+-    ReplicationTargetChooser replicator = new ReplicationTargetChooser();
++    public ReplicationTargetChooser replicator = new ReplicationTargetChooser();
+ 
+     private HostsFileReader hostsReader; 
+     private Daemon dnthread = null;
+@@ -2729,7 +2729,7 @@ class FSNamesystem implements FSConstants {
+      * @author hairong
+      *
+      */
+-    class ReplicationTargetChooser {
++    public class ReplicationTargetChooser {
+       private class NotEnoughReplicasException extends Exception {
+         NotEnoughReplicasException( String msg ) {
+           super( msg );
+@@ -2748,7 +2748,7 @@ class FSNamesystem implements FSConstants {
+        * @return array of DatanodeDescriptor instances chosen as targets
+        * and sorted as a pipeline.
+        */
+-      DatanodeDescriptor[] chooseTarget(int numOfReplicas,
++      public DatanodeDescriptor[] chooseTarget(int numOfReplicas,
+           DatanodeDescriptor writer,
+           List<DatanodeDescriptor> excludedNodes,
+           long blocksize ) {
+-- 
+2.10.1 (Apple Git-78)
+

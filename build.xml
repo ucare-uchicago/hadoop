@@ -207,7 +207,7 @@
     <javac 
      encoding="${build.encoding}" 
      srcdir="${src.dir};${build.src}"
-     includes="org/apache/hadoop/**/*.java"
+     includes="org/apache/hadoop/**/*.java,edu/uchicago/cs/ucare/scale/*.java"
      destdir="${build.classes}"
      debug="${javac.debug}"
      optimize="${javac.optimize}"

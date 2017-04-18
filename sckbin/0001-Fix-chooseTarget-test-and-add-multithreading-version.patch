@@ -1,0 +1,139 @@
+From f3895e0ad53189eed3cfc27df4b472ea9b2d27f3 Mon Sep 17 00:00:00 2001
+From: Tanakorn L <tanakorn@cs.uchicago.edu>
+Date: Mon, 27 Feb 2017 19:00:42 -0600
+Subject: [PATCH] Fix chooseTarget test and add multithreading version of the
+ test
+
+---
+ .../uchicago/cs/ucare/scale/ChooseTargetTest.java  |  7 +-
+ .../ucare/scale/MultiThreadChooseTargetTest.java   | 75 ++++++++++++++++++++++
+ src/java/org/apache/hadoop/dfs/FSNamesystem.java   |  6 +-
+ 3 files changed, 83 insertions(+), 5 deletions(-)
+ create mode 100644 src/java/edu/uchicago/cs/ucare/scale/MultiThreadChooseTargetTest.java
+
+diff --git a/src/java/edu/uchicago/cs/ucare/scale/ChooseTargetTest.java b/src/java/edu/uchicago/cs/ucare/scale/ChooseTargetTest.java
+index 2da1828..61d72f9 100644
+--- a/src/java/edu/uchicago/cs/ucare/scale/ChooseTargetTest.java
++++ b/src/java/edu/uchicago/cs/ucare/scale/ChooseTargetTest.java
+@@ -49,12 +49,11 @@ public class ChooseTargetTest {
+         }
+         DatanodeDescriptor[] targets;
+         long start = System.currentTimeMillis();
+-//        targets = replicator.chooseTarget(numDatanodes, dataNodes[0], null, BLOCK_SIZE);
+-        for (int i = 0; i < numDatanodes; i++) {
+-            targets = replicator.chooseTarget(numDatanodes, dataNodes[i], null, BLOCK_SIZE);
++        for (int i = 0; i < 3; i++) {
++            targets = replicator.chooseTarget(numDatanodes, dataNodes[0], null, BLOCK_SIZE);
+         }
+         long elapse = System.currentTimeMillis() - start;
+-        System.out.println(elapse / numDatanodes);
++        System.out.println("chooseTarget average elapse time = " + elapse / 3);
+     }
+ 
+ }
+diff --git a/src/java/edu/uchicago/cs/ucare/scale/MultiThreadChooseTargetTest.java b/src/java/edu/uchicago/cs/ucare/scale/MultiThreadChooseTargetTest.java
+new file mode 100644
+index 0000000..5795d43
+--- /dev/null
++++ b/src/java/edu/uchicago/cs/ucare/scale/MultiThreadChooseTargetTest.java
+@@ -0,0 +1,75 @@
++package edu.uchicago.cs.ucare.scale;
++
++import java.io.IOException;
++
++import org.apache.hadoop.conf.Configuration;
++import org.apache.hadoop.dfs.DatanodeDescriptor;
++import org.apache.hadoop.dfs.DatanodeID;
++import org.apache.hadoop.dfs.FSConstants;
++import org.apache.hadoop.dfs.FSNamesystem;
++import org.apache.hadoop.dfs.NameNode;
++import org.apache.hadoop.net.NetworkTopology;
++
++public class MultiThreadChooseTargetTest {
++
++    public static final int BLOCK_SIZE = 1024;
++    public static final Configuration CONF = new Configuration();
++    public static NetworkTopology cluster;
++    public static NameNode namenode;
++    public static FSNamesystem.ReplicationTargetChooser replicator;
++    public static DatanodeDescriptor dataNodes[];
++
++    public static void main(String[] args) {
++        if (args.length < 2) {
++            System.err.println("Please enter number of datanodes and writers");
++            System.exit(0);
++        }
++        int numDatanodes = Integer.parseInt(args[0]);
++        int numWriters = Integer.parseInt(args[1]);
++        try {
++            CONF.set("fs.default.name", "localhost:8020");
++            NameNode.format(CONF);
++            namenode = new NameNode(CONF);
++        } catch (IOException e) {
++            e.printStackTrace();
++        }
++        FSNamesystem fsNamesystem = FSNamesystem.getFSNamesystem();
++        replicator = fsNamesystem.replicator;
++        cluster = fsNamesystem.clusterMap;
++        dataNodes = new DatanodeDescriptor[numDatanodes];
++        for (int i = 0; i < numDatanodes; i++) {
++            String hostname = "h" + i;
++            String networkLoc = "/defaultrack";
++            DatanodeDescriptor datanode = new DatanodeDescriptor(new DatanodeID(hostname + ":5020", "0", -1), networkLoc);
++            cluster.add(datanode);
++            dataNodes[i] = datanode;
++        }
++        for (int i = 0; i < numDatanodes; i++) {
++            dataNodes[i].updateHeartbeat(2 * FSConstants.MIN_BLOCKS_FOR_WRITE
++                    * BLOCK_SIZE, 2 * FSConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, 0);
++        }
++        DatanodeDescriptor[] targets;
++        long start = System.currentTimeMillis();
++        Thread[] writers = new Thread[numWriters];
++        for (int i = 0; i < numWriters; i++) {
++            final int j = i;
++            final int n = numDatanodes;
++            writers[i] = new Thread() {
++                public void run() {
++                    replicator.chooseTarget(n, dataNodes[j], null, BLOCK_SIZE);
++                }
++            };
++            writers[i].start();
++        }
++        for (int i = 0; i < numWriters; i++) {
++            try {
++                writers[i].join();
++            } catch (InterruptedException e) {
++                e.printStackTrace();
++            }
++        }
++        long elapse = System.currentTimeMillis() - start;
++        System.out.println("All chooseTarget elapse time = " + elapse);
++    }
++
++}
+diff --git a/src/java/org/apache/hadoop/dfs/FSNamesystem.java b/src/java/org/apache/hadoop/dfs/FSNamesystem.java
+index b104de8..16ae333 100644
+--- a/src/java/org/apache/hadoop/dfs/FSNamesystem.java
++++ b/src/java/org/apache/hadoop/dfs/FSNamesystem.java
+@@ -2752,12 +2752,16 @@ public class FSNamesystem implements FSConstants {
+           DatanodeDescriptor writer,
+           List<DatanodeDescriptor> excludedNodes,
+           long blocksize ) {
++          long start = System.currentTimeMillis();
+         if( excludedNodes == null) {
+           excludedNodes = new ArrayList<DatanodeDescriptor>();
+         }
+         
+-        return chooseTarget(numOfReplicas, writer, 
++        DatanodeDescriptor[] result = chooseTarget(numOfReplicas, writer, 
+             new ArrayList<DatanodeDescriptor>(), excludedNodes, blocksize);
++        long elapse = System.currentTimeMillis() - start;
++        System.out.println("chooseTarget elapse time = " + elapse);
++        return result;
+       }
+       
+       /**
+-- 
+2.10.1 (Apple Git-78)
+
