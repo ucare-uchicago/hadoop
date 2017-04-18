@@ -2777,6 +2777,7 @@ class FSNamesystem implements FSConstants {
           List<DatanodeDescriptor> choosenNodes,
           List<DatanodeDescriptor> excludedNodes,
           long blocksize ) {
+        long start = System.currentTimeMillis();
         if( numOfReplicas == 0 )
           return new DatanodeDescriptor[0];
         
@@ -2807,7 +2808,10 @@ class FSNamesystem implements FSConstants {
         results.removeAll(choosenNodes);
         
         // sorting nodes to form a pipeline
-        return getPipeline((writer==null)?localNode:writer, results);
+        DatanodeDescriptor[] ret = getPipeline((writer==null)?localNode:writer, results);
+        long time = System.currentTimeMillis() - start;
+        LOG.warn(time + " ms spent on chooseTarget()");
+        return ret;
       }
       
       /* choose <i>numOfReplicas</i> from all data nodes */
@@ -3116,7 +3120,6 @@ class FSNamesystem implements FSConstants {
       private DatanodeDescriptor[] getPipeline(
           DatanodeDescriptor writer,
           List<DatanodeDescriptor> nodes ) {
-        long start = System.currentTimeMillis();
         int numOfNodes = nodes.size();
         DatanodeDescriptor[] results = new DatanodeDescriptor[numOfNodes];
         if( numOfNodes==0 ) return results;
@@ -3147,8 +3150,6 @@ class FSNamesystem implements FSConstants {
             writer = shortestNode;
           }
         }
-        long time = System.currentTimeMillis() - start;
-        LOG.warn(time + " ms spent on getPipeline()");
         return nodes.toArray( results );
       }
       
