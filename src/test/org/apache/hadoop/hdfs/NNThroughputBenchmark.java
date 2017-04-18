@@ -948,11 +948,7 @@ public class NNThroughputBenchmark {
           addBlocks(fileName, clientName);
           nameNode.complete(fileName, clientName);
         }
-        // prepare block reports
-        for(int idx=0; idx < nrDatanodes; idx++) {
-          datanodes[idx].formBlockReport();
-        }
-
+        
         // jef: start the rest N datanodes
         for(int idx=nrDatanodes/2; idx < nrDatanodes; idx++) {
             datanodes[idx] = new TinyDatanode(idx, blocksPerReport);
@@ -961,7 +957,12 @@ public class NNThroughputBenchmark {
               : "Data-nodes must be sorted lexicographically.";
             datanodes[idx].sendHeartbeat();
             prevDNName = datanodes[idx].getName();
-          }
+        }
+        
+        // prepare block reports
+        for(int idx=0; idx < nrDatanodes; idx++) {
+          datanodes[idx].formBlockReport();
+        }
         
         try {
         	Thread.sleep(10000);
