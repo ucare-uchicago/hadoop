@@ -966,12 +966,12 @@ public class NNThroughputBenchmark {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
           // jef: for GEDA
           while(!datanodes[dnIdx].acceptBlocks){
-        	  LOG.info("Datanode-" + datanodes[dnIdx].getName() + " is stopped for now.");
         	  dnIdx++;
         	  if(dnIdx >= datanodes.length){
         		  dnIdx = 0;
         	  }
           }
+    	  LOG.info("Datanode-" + datanodes[dnIdx].getName() + " add block.");
           datanodes[dnIdx].addBlock(loc.getBlock());
           nameNode.blockReceived(
               datanodes[dnIdx].dnRegistration, 
