@@ -1094,7 +1094,7 @@ public class NNThroughputBenchmark {
       
       // jef: need to wait until decommission are all fully done
       try{
-    	  Thread.sleep(400000);
+    	  Thread.sleep(20000);
       } catch (Exception ex) {
     	  ex.printStackTrace();
       }

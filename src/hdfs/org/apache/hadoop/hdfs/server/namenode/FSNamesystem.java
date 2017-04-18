@@ -470,9 +470,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval +
       10 * heartbeatInterval;
     this.replicationRecheckInterval = 
-      conf.getInt("dfs.replication.interval", 3) * 1000L;
+      conf.getInt("dfs.replication.interval", 1) * 1000L;
+//      conf.getInt("dfs.replication.interval", 3) * 1000L;
     this.decommissionRecheckInterval = 
-      conf.getInt("dfs.namenode.decommission.interval", 5 * 60) * 1000L;
+      conf.getInt("dfs.namenode.decommission.interval", 20) * 1000L;
+//      conf.getInt("dfs.namenode.decommission.interval", 5 * 60) * 1000L;
     this.defaultBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     this.maxFsObjects = conf.getLong("dfs.max.objects", 0);
     this.blockInvalidateLimit = Math.max(this.blockInvalidateLimit, 
@@ -3682,6 +3684,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * 4. Removed from exclude --> stop decommission.
    */
   public void refreshNodes(Configuration conf) throws IOException {
+	LOG.info("JEF: refreshNodes()");
     checkSuperuserPrivilege();
     // Reread the config to get dfs.hosts and dfs.hosts.exclude filenames.
     // Update the file names and refresh internal includes and excludes list
