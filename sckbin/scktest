@@ -21,4 +21,5 @@ alljars="$alljars:/tmp/sck-hadoop-4061/conf"
 #java -cp $alljars -Dlog4j.configuration="src/test/log4j.properties" junit.textui.TestRunner org.apache.hadoop.hdfs.NNThroughputBenchmark -datanodes 32 -nodesToDecommission 16 -totalBlocks 1024 -replication 3
 
 clsetup
+hadoop namenode -format
 hadoop -cp $alljars org.apache.hadoop.hdfs.NNThroughputBenchmark -op replication -numDatanodes 16 -nodesToDecommission 8 -totalBlocks 10000 -replication 3 
