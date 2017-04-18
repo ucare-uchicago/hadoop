@@ -903,7 +903,7 @@ public class NNThroughputBenchmark {
                                       / replication);
         int nrFiles = (int)Math.ceil((double)nrBlocks / blocksPerFile);
         String debug = "Datanodes=" + nrDatanodes + "\nDN to decom=" + numToDecom + "\nfiles=" + nrFiles + 
-        		"\nblocksPerFile=" + nrBlocks + "\nreplication=" + replication + "\nblocksPerReport=" + blocksPerReport;
+        		"\nblocksPerFile=" + blocksPerFile + "\nblocks=" + nrBlocks + "\nreplication=" + replication + "\nblocksPerReport=" + blocksPerReport;
         LOG.info("STATUS: \n" + debug);
         
         datanodes = new TinyDatanode[nrDatanodes];
@@ -1055,7 +1055,7 @@ public class NNThroughputBenchmark {
         "-op", "blockReport",
         "-datanodes", String.valueOf(numDatanodes),
         "-blocksPerReport", String.valueOf(totalBlocks*replication/nodesToDecommission),
-        "-blocksPerFile", String.valueOf(numDatanodes)};
+        "-blocksPerFile", String.valueOf(nodesToDecommission)};
       blockReportObject = new BlockReportStats(Arrays.asList(blkReportArgs));
       numDecommissionedBlocks = 0;
       numPendingBlocks = 0;
