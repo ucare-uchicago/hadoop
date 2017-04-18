@@ -1075,10 +1075,8 @@ public class NNThroughputBenchmark {
       
       // stop replication monitor
       nameNode.namesystem.replthread.interrupt();
-      nameNode.namesystem.dnthread.interrupt();
       try {
         nameNode.namesystem.replthread.join();
-        nameNode.namesystem.dnthread.join();
       } catch(InterruptedException ei) {
         return;
       }
