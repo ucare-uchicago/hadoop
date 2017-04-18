@@ -1048,14 +1048,13 @@ public class NNThroughputBenchmark {
       // number of operations is 4 times the number of decommissioned
       // blocks divided by the number of needed replications scanned 
       // by the replication monitor in one iteration
-      numOpsRequired = (totalBlocks*replication*nodesToDecommission*2)
-            / (numDatanodes*numDatanodes);
+      numOpsRequired = (totalBlocks*replication*2) / (nodesToDecommission);
 
       String[] blkReportArgs = {
         "-op", "blockReport",
         "-datanodes", String.valueOf(numDatanodes),
         "-blocksPerReport", String.valueOf(totalBlocks*replication/nodesToDecommission),
-        "-blocksPerFile", String.valueOf(nodesToDecommission)};
+        "-blocksPerFile", String.valueOf(1000)};
       blockReportObject = new BlockReportStats(Arrays.asList(blkReportArgs));
       numDecommissionedBlocks = 0;
       numPendingBlocks = 0;
