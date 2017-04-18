@@ -971,7 +971,6 @@ public class NNThroughputBenchmark {
         		  dnIdx = 0;
         	  }
           }
-    	  LOG.info("Datanode-" + datanodes[dnIdx].getName() + " add block.");
           datanodes[dnIdx].addBlock(loc.getBlock());
           nameNode.blockReceived(
               datanodes[dnIdx].dnRegistration, 
@@ -1109,6 +1108,13 @@ public class NNThroughputBenchmark {
       decommissionNodesWithGEDA(aliveNodes);
       // set node replication limit
       nameNode.namesystem.setNodeReplicationLimit(nodeReplicationLimit);
+      
+      // jef: wait until decommissionNodes are done
+      try {
+      	Thread.sleep(10000);
+      } catch (Exception ex){
+      	ex.printStackTrace();
+      }
     }
 
     private void decommissionNodes() throws IOException {
