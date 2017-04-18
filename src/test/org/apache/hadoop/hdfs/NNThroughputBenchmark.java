@@ -902,6 +902,10 @@ public class NNThroughputBenchmark {
         int nrBlocks = (int)Math.ceil((double)blocksPerReport * numToDecom 
                                       / replication);
         int nrFiles = (int)Math.ceil((double)nrBlocks / blocksPerFile);
+        String debug = "Datanodes=" + nrDatanodes + "\nDN to decom=" + numToDecom + "\nfiles=" + nrFiles + 
+        		"\nblocksPerFile=" + nrBlocks + "\nreplication=" + replication + "\nblocksPerReport=" + blocksPerReport;
+        LOG.info("STATUS: \n" + debug);
+        
         datanodes = new TinyDatanode[nrDatanodes];
         // create data-nodes
         String prevDNName = "";
@@ -928,7 +932,7 @@ public class NNThroughputBenchmark {
         }
 
         // create files 
-        LOG.info("Creating " + nrFiles + " with " + blocksPerFile + " blocks each.");
+        LOG.info("Creating " + nrFiles + " files with " + blocksPerFile + " blocks each.");
         FileNameGenerator nameGenerator;
         nameGenerator = new FileNameGenerator(getBaseDir(), 100);
         String clientName = getClientName(007);
@@ -1108,13 +1112,6 @@ public class NNThroughputBenchmark {
       decommissionNodesWithGEDA(aliveNodes);
       // set node replication limit
       nameNode.namesystem.setNodeReplicationLimit(nodeReplicationLimit);
-      
-      // jef: wait until decommissionNodes are done
-      try {
-      	Thread.sleep(10000);
-      } catch (Exception ex){
-      	ex.printStackTrace();
-      }
     }
 
     private void decommissionNodes() throws IOException {
