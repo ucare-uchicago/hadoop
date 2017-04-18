@@ -907,9 +907,9 @@ public class NNThroughputBenchmark {
         LOG.info("STATUS: \n" + debug);
         
         datanodes = new TinyDatanode[nrDatanodes];
-        // create data-nodes
+        // create N data-nodes
         String prevDNName = "";
-        for(int idx=0; idx < nrDatanodes; idx++) {
+        for(int idx=0; idx < nrDatanodes/2; idx++) {
           datanodes[idx] = new TinyDatanode(idx, blocksPerReport);
           datanodes[idx].register();
           assert datanodes[idx].getName().compareTo(prevDNName) > 0
@@ -919,6 +919,7 @@ public class NNThroughputBenchmark {
         }
         
         // jef: stop N datanodes
+        /*
         LOG.info("JEF: stop some nodes and record the alive nodes");
         ArrayList<TinyDatanode> aliveNodes = new ArrayList<TinyDatanode>();
         for (int i=0; i<nrDatanodes ; i++) {
@@ -930,6 +931,7 @@ public class NNThroughputBenchmark {
         		aliveNodes.add(datanodes[i]);
         	}
         }
+        */
 
         // create files 
         LOG.info("Creating " + nrFiles + " files with " + blocksPerFile + " blocks each.");
@@ -948,17 +950,28 @@ public class NNThroughputBenchmark {
         for(int idx=0; idx < nrDatanodes; idx++) {
           datanodes[idx].formBlockReport();
         }
+
+        // jef: start the rest N datanodes
+        for(int idx=nrDatanodes/2; idx < nrDatanodes; idx++) {
+            datanodes[idx] = new TinyDatanode(idx, blocksPerReport);
+            datanodes[idx].register();
+            assert datanodes[idx].getName().compareTo(prevDNName) > 0
+              : "Data-nodes must be sorted lexicographically.";
+            datanodes[idx].sendHeartbeat();
+            prevDNName = datanodes[idx].getName();
+          }
         
-        // jef: start N datanodes
         try {
         	Thread.sleep(10000);
         } catch (Exception ex){
         	ex.printStackTrace();
         }
+        /*
         for (int i=nrDatanodes-1; i>=numToDecom ; i--) {
         	LOG.info("Starting datanode " + datanodes[i].getName() + " ...");
         	datanodes[i].setAcceptBlocks(true);
         }
+        */
         
         return aliveNodes;
       }
@@ -969,12 +982,14 @@ public class NNThroughputBenchmark {
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
           // jef: for GEDA
+          /*
           while(!datanodes[dnIdx].acceptBlocks){
         	  dnIdx++;
         	  if(dnIdx >= datanodes.length){
         		  dnIdx = 0;
         	  }
           }
+          */
           datanodes[dnIdx].addBlock(loc.getBlock());
           nameNode.blockReceived(
               datanodes[dnIdx].dnRegistration, 
