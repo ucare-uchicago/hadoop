@@ -1054,7 +1054,7 @@ public class NNThroughputBenchmark {
       String[] blkReportArgs = {
         "-op", "blockReport",
         "-datanodes", String.valueOf(numDatanodes),
-        "-blocksPerReport", String.valueOf(totalBlocks*replication/numDatanodes),
+        "-blocksPerReport", String.valueOf(totalBlocks*replication/nodesToDecommission),
         "-blocksPerFile", String.valueOf(numDatanodes)};
       blockReportObject = new BlockReportStats(Arrays.asList(blkReportArgs));
       numDecommissionedBlocks = 0;
