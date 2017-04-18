@@ -917,7 +917,7 @@ public class NNThroughputBenchmark {
         // jef: stop N datanodes
         LOG.info("JEF: stop some nodes and record the alive nodes");
         ArrayList<TinyDatanode> aliveNodes = new ArrayList<TinyDatanode>();
-        for (int i=0; i>=nrDatanodes ; i++) {
+        for (int i=0; i<nrDatanodes ; i++) {
         	if(i < numToDecom){
 	        	LOG.info("Stopping datanode " + datanodes[i].getName() + " ...");
 	        	datanodes[i].setAcceptBlocks(false);
