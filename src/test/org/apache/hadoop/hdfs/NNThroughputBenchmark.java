@@ -1091,6 +1091,13 @@ public class NNThroughputBenchmark {
       decommissionNodesWithGEDA(aliveNodes);
       // set node replication limit
       nameNode.namesystem.setNodeReplicationLimit(nodeReplicationLimit);
+      
+      // jef: need to wait until decommission are all fully done
+      try{
+    	  Thread.sleep(400000);
+      } catch (Exception ex) {
+    	  ex.printStackTrace();
+      }
     }
 
     private void decommissionNodes() throws IOException {

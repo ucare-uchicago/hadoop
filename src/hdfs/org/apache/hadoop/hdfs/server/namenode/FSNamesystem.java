@@ -3790,6 +3790,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         
     public void run() {
       while (fsRunning) {
+    	LOG.info("DecommissionedMonitor is evaluating.. later will sleep for " + decommissionRecheckInterval + "ms");
         try {
           decommissionedDatanodeCheck();
         } catch (Exception e) {
