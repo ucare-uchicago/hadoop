@@ -2781,6 +2781,7 @@ public class FSNamesystem implements FSConstants {
           List<DatanodeDescriptor> choosenNodes,
           List<DatanodeDescriptor> excludedNodes,
           long blocksize ) {
+        long start = System.currentTimeMillis();
         if( numOfReplicas == 0 )
           return new DatanodeDescriptor[0];
         
@@ -2811,7 +2812,10 @@ public class FSNamesystem implements FSConstants {
         results.removeAll(choosenNodes);
         
         // sorting nodes to form a pipeline
-        return getPipeline((writer==null)?localNode:writer, results);
+        DatanodeDescriptor[] ret = getPipeline((writer==null)?localNode:writer, results);
+        long time = System.currentTimeMillis() - start;
+        LOG.warn(time + " ms spent on chooseTarget()");
+        return ret;
       }
       
       /* choose <i>numOfReplicas</i> from all data nodes */
