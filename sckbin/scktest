@@ -22,4 +22,4 @@ alljars="$alljars:/tmp/sck-hadoop-4061/conf"
 
 clsetup
 hadoop namenode -format
-hadoop -cp $alljars org.apache.hadoop.hdfs.NNThroughputBenchmark -op replication -numDatanodes 16 -nodesToDecommission 8 -totalBlocks 10000 -replication 3 
+hadoop -cp $alljars org.apache.hadoop.hdfs.NNThroughputBenchmark -op replication -datanodes 16 -nodesToDecommission 8 -totalBlocks 10000 -replication 3 
