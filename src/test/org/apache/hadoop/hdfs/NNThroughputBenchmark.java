@@ -1122,7 +1122,7 @@ public class NNThroughputBenchmark {
     }
     
     private void decommissionNodesWithGEDA(ArrayList<TinyDatanode> aliveNodes) throws IOException {
-    	Path excludeFilePath = new Path("/tmp/hadoop-ucare/dfs", "exclude");
+    	Path excludeFilePath = new Path("/tmp/hadoop-ucare/dfs/hosts", "exclude");
         FileSystem localFileSys = FileSystem.getLocal(config);
         writeConfigFile(localFileSys, excludeFilePath, null);
     	
