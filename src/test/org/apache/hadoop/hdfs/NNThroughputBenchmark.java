@@ -688,6 +688,7 @@ public class NNThroughputBenchmark {
     }
   }
 
+  
   /**
    * Minimal data-node simulator.
    */
@@ -811,26 +812,26 @@ public class NNThroughputBenchmark {
       return blocks.length;
     }
     
+    //for GEDA
+    class NNBlockReport implements Runnable {
+  	  DatanodeRegistration receivedDNReg;
+  	  Block[] b;
+  	  String[] s;
+  	  
+  	  public NNBlockReport(DatanodeRegistration receivedDNReg, Block[] block, String[] str){
+  		  this.receivedDNReg = receivedDNReg;
+  		  this.b = block;
+  		  this.s = str;
+  	  }
+  	  
+  	  @Override
+  	  public void run(){
+  		  nameNode.blockReceived(receivedDNReg, b, s);
+  	  }
+    }
+    
   }
   
-  // for GEDA
-  class NNBlockReport implements Runnable {
-	  DatanodeRegistration receivedDNReg;
-	  Block[] b;
-	  String[] s;
-	  
-	  public NNBlockReport(DatanodeRegistration receivedDNReg, Block[] block, String[] str){
-		  this.receivedDNReg = receivedDNReg;
-		  this.b = block;
-		  this.s = str;
-	  }
-	  
-	  @Override
-	  public void run(){
-		  nameNode.blockReceived(receivedDNReg, b, s);
-	  }
-  }
-
   /**
    * Block report statistics.
    * 
@@ -1103,9 +1104,8 @@ public class NNThroughputBenchmark {
         } else if(args.get(i).equals("-isGEDA")) {
           isGeda = true;
           System.out.println("JEF: isGEDA=" + isGeda);
-        }
-//        } else if(!ignoreUnrelatedOptions)
-//          printUsage();
+        } else if(!ignoreUnrelatedOptions)
+          printUsage();
       }
     }
 
