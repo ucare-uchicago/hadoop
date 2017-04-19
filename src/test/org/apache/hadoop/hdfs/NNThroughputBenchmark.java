@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -30,6 +31,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -1118,7 +1122,12 @@ public class NNThroughputBenchmark {
     }
     
     private void decommissionNodesWithGEDA(ArrayList<TinyDatanode> aliveNodes) throws IOException {
+    	Path excludeFilePath = new Path("/tmp/hadoop-ucare/dfs/exclude-file", "exclude");;
+        FileSystem localFileSys = FileSystem.getLocal(config);
+        writeConfigFile(localFileSys, excludeFilePath, null);
+    	
     	String excludeFN = config.get("dfs.hosts.exclude", "exclude");
+    	System.out.println("JEF: excludeFN=" + excludeFN);
     	FileOutputStream excludeFile = new FileOutputStream(excludeFN);
     	excludeFile.getChannel().truncate(0L);
     	numDecommissionedBlocks = 0;
@@ -1132,6 +1141,23 @@ public class NNThroughputBenchmark {
 	    nameNode.refreshNodes();
 		System.out.println("JEF: has called refreshNodes() in NameNode");
     }
+    
+    private void writeConfigFile(FileSystem fs, Path name, ArrayList<String> nodes) throws IOException {
+    	// delete if it already exists
+    	if (fs.exists(name)) {
+    		fs.delete(name, true);
+    	}
+    	
+    	FSDataOutputStream stm = fs.create(name);
+    	if (nodes != null) {
+    		for (Iterator<String> it = nodes.iterator(); it.hasNext();) {
+    			String node = it.next();
+    			stm.writeBytes(node);
+    			stm.writeBytes("\n");
+    		}
+    	}
+	    stm.close();
+	}
 
     /**
      * Does not require the argument
