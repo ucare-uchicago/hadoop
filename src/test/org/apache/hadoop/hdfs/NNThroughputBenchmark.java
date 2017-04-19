@@ -1130,6 +1130,7 @@ public class NNThroughputBenchmark {
 	    }
 	    excludeFile.close();
 	    nameNode.refreshNodes();
+		System.out.println("JEF: has called refreshNodes() in NameNode");
     }
 
     /**
