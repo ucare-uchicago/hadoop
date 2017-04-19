@@ -826,7 +826,11 @@ public class NNThroughputBenchmark {
   	  
   	  @Override
   	  public void run(){
-  		  nameNode.blockReceived(receivedDNReg, b, s);
+  		  try {
+  			  nameNode.blockReceived(receivedDNReg, b, s);
+  		  } catch (Exception ex) {
+  			  ex.printStackTrace();
+  		  }
   	  }
     }
     
