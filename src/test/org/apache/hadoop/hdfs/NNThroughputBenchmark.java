@@ -23,6 +23,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
 
 import javax.security.auth.login.LoginException;
@@ -90,6 +94,11 @@ public class NNThroughputBenchmark {
   static NameNode nameNode;
 
   private final UserGroupInformation ugi;
+  
+  // for GEDA
+  private static boolean isGeda;
+  private static BlockingQueue<Runnable> consumerQueue = new LinkedBlockingQueue<Runnable>();
+  private static ThreadPoolExecutor consumer = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, consumerQueue);
 
   NNThroughputBenchmark(Configuration conf) throws IOException, LoginException {
     config = conf;
@@ -101,7 +110,6 @@ public class NNThroughputBenchmark {
     config.setInt("dfs.namenode.handler.count", 1);
     // set exclude file
     config.set("dfs.hosts.exclude", "${hadoop.tmp.dir}/dfs/hosts/exclude");
-    config.setInt("dfs.namenode.decommission.interval", 10);
     File excludeFile = new File(config.get("dfs.hosts.exclude", "exclude"));
     if(! excludeFile.exists()) {
       if(!excludeFile.getParentFile().mkdirs())
@@ -789,14 +797,38 @@ public class NNThroughputBenchmark {
           receivedDNReg.setStorageInfo(
                           new DataStorage(nsInfo, dnInfo.getStorageID()));
           receivedDNReg.setInfoPort(dnInfo.getInfoPort());
-          nameNode.blockReceived( receivedDNReg, 
+          if(isGeda){
+        	  NNBlockReport br = new NNBlockReport(receivedDNReg, new Block[] {block[i]}, 
+        			  new String[] {DataNode.EMPTY_DEL_HINT});
+        	  consumer.execute(br);
+          } else {
+        	  nameNode.blockReceived( receivedDNReg, 
                                   new Block[] {blocks[i]},
                                   new String[] {DataNode.EMPTY_DEL_HINT});
+          }
         }
       }
       return blocks.length;
     }
     
+  }
+  
+  // for GEDA
+  class NNBlockReport implements Runnable {
+	  DatanodeRegistration receivedDNReg;
+	  Block[] b;
+	  String[] s;
+	  
+	  public NNBlockReport(DatanodeRegistration receivedDNReg, Block[] block, String[] str){
+		  this.receivedDNReg = receivedDNReg;
+		  this.b = block;
+		  this.s = str;
+	  }
+	  
+	  @Override
+	  public void run(){
+		  nameNode.blockReceived(receivedDNReg, b, s);
+	  }
   }
 
   /**
@@ -1029,6 +1061,7 @@ public class NNThroughputBenchmark {
       nodesToDecommission = 1;
       nodeReplicationLimit = 100;
       totalBlocks = 100;
+      isGeda = false;
       parseArguments(args);
       // number of operations is 4 times the number of decommissioned
       // blocks divided by the number of needed replications scanned 
@@ -1067,6 +1100,8 @@ public class NNThroughputBenchmark {
         } else if(args.get(i).equals("-replication")) {
           if(i+1 == args.size())  printUsage();
           replication = Short.parseShort(args.get(++i));
+        } else if(args.get(i).equals("-isGEDA")) {
+          isGeda = true;
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }

@@ -3474,13 +3474,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       //
       // all the blocks that reside on this node have to be 
       // replicated.
-      System.out.println("JEF: Moving blocks to other nodes at node=" + node.getName());
       Iterator<Block> decommissionBlocks = node.getBlockIterator();
       while(decommissionBlocks.hasNext()) {
         Block block = decommissionBlocks.next();
         updateNeededReplications(block, -1, 0);
       }
-      System.out.println("JEF: Finished moving blocks to other nodes from node:" + node.getName());
     }
   }
 
@@ -3684,7 +3682,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * 4. Removed from exclude --> stop decommission.
    */
   public void refreshNodes(Configuration conf) throws IOException {
-	System.out.println("JEF: refreshNodes() in FSNamesystem");
     checkSuperuserPrivilege();
     // Reread the config to get dfs.hosts and dfs.hosts.exclude filenames.
     // Update the file names and refresh internal includes and excludes list
@@ -3704,7 +3701,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
           if (inExcludedHostsList(node, null)) {
             if (!node.isDecommissionInProgress() && 
                 !node.isDecommissioned()) {
-              System.out.println("JEF: startDecommission() on node=" + node.getName());
               startDecommission(node);   // case 3.
             }
           } else {

@@ -536,7 +536,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * uses the files list in the configuration to update the list. 
    */
   public void refreshNodes() throws IOException {
-	System.out.println("JEF: call refreshNodes() in NameNode");
     namesystem.refreshNodes(new Configuration());
   }
 
