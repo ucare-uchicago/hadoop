@@ -798,7 +798,7 @@ public class NNThroughputBenchmark {
                           new DataStorage(nsInfo, dnInfo.getStorageID()));
           receivedDNReg.setInfoPort(dnInfo.getInfoPort());
           if(isGeda){
-        	  NNBlockReport br = new NNBlockReport(receivedDNReg, new Block[] {block[i]}, 
+        	  NNBlockReport br = new NNBlockReport(receivedDNReg, new Block[] {blocks[i]}, 
         			  new String[] {DataNode.EMPTY_DEL_HINT});
         	  consumer.execute(br);
           } else {
