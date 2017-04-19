@@ -3469,18 +3469,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     throws IOException {
 
     if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
-      LOG.info("Start Decommissioning node " + node.getName());
+      System.out.println("JEF: Start Decommissioning node " + node.getName());
       node.startDecommission();
       //
       // all the blocks that reside on this node have to be 
       // replicated.
-      LOG.info("JEF: Moving blocks to other nodes at node=" + node.getName());
+      System.out.println("JEF: Moving blocks to other nodes at node=" + node.getName());
       Iterator<Block> decommissionBlocks = node.getBlockIterator();
       while(decommissionBlocks.hasNext()) {
         Block block = decommissionBlocks.next();
         updateNeededReplications(block, -1, 0);
       }
-      LOG.info("JEF: Finished moving blocks to other nodes from node:" + node.getName());
+      System.out.println("JEF: Finished moving blocks to other nodes from node:" + node.getName());
     }
   }
 
@@ -3684,7 +3684,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * 4. Removed from exclude --> stop decommission.
    */
   public void refreshNodes(Configuration conf) throws IOException {
-	LOG.info("JEF: refreshNodes()");
+	System.out.println("JEF: refreshNodes() in FSNamesystem");
     checkSuperuserPrivilege();
     // Reread the config to get dfs.hosts and dfs.hosts.exclude filenames.
     // Update the file names and refresh internal includes and excludes list
@@ -3704,7 +3704,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
           if (inExcludedHostsList(node, null)) {
             if (!node.isDecommissionInProgress() && 
                 !node.isDecommissioned()) {
-              LOG.info("JEF: startDecommission() on node=" + node.getName());
+              System.out.println("JEF: startDecommission() on node=" + node.getName());
               startDecommission(node);   // case 3.
             }
           } else {
@@ -3793,7 +3793,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         
     public void run() {
       while (fsRunning) {
-    	LOG.info("DecommissionedMonitor is evaluating.. later will sleep for " + decommissionRecheckInterval + "ms");
+    	System.out.println("JEF: DecommissionedMonitor is evaluating.. later will sleep for " + decommissionRecheckInterval + "ms");
         try {
           decommissionedDatanodeCheck();
         } catch (Exception e) {
