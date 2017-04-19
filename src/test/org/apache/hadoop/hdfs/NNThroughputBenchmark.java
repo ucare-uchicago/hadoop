@@ -827,6 +827,7 @@ public class NNThroughputBenchmark {
   	  @Override
   	  public void run(){
   		  try {
+  			  System.out.println("Execute NN blockreceived");
   			  nameNode.blockReceived(receivedDNReg, b, s);
   		  } catch (Exception ex) {
   			  ex.printStackTrace();
@@ -1143,7 +1144,7 @@ public class NNThroughputBenchmark {
       
       // jef: need to wait until decommission are all fully done
       try{
-    	  Thread.sleep(60000);
+    	  Thread.sleep(180000);
       } catch (Exception ex) {
     	  ex.printStackTrace();
       }
