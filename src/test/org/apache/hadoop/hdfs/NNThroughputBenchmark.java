@@ -101,6 +101,7 @@ public class NNThroughputBenchmark {
     config.setInt("dfs.namenode.handler.count", 1);
     // set exclude file
     config.set("dfs.hosts.exclude", "${hadoop.tmp.dir}/dfs/hosts/exclude");
+    config.setInt("dfs.namenode.decommission.interval", 20);
     File excludeFile = new File(config.get("dfs.hosts.exclude", "exclude"));
     if(! excludeFile.exists()) {
       if(!excludeFile.getParentFile().mkdirs())
@@ -1098,7 +1099,7 @@ public class NNThroughputBenchmark {
       
       // jef: need to wait until decommission are all fully done
       try{
-    	  Thread.sleep(20000);
+    	  Thread.sleep(30000);
       } catch (Exception ex) {
     	  ex.printStackTrace();
       }
