@@ -1073,6 +1073,9 @@ public class NNThroughputBenchmark {
     }
 
     void generateInputs(int[] ignore) throws IOException {
+      // hack decommission thread
+      nameNode.namesystem.setDecommissionHack(true);
+    	
       // start data-nodes; create a bunch of files; generate block reports.
 //      blockReportObject.generateInputs(ignore);
       // jef: for GEDA

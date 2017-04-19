@@ -3773,12 +3773,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       checkDecommissionStateInternal(node);
     }
     long estimatedTime = System.currentTimeMillis() - startTime;
-    FSNamesystem.LOG.warn(estimatedTime+" ms spent on decommissionedDatanodeCheck");
+    System.out.println("JEF: " + estimatedTime + "ms spent on decommissionedDatanodeCheck");
 
     if (this.decomHackEnabled) {
       try {
         long extraSleep = 60 * 1000 - estimatedTime;
-        FSNamesystem.LOG.warn("decommissionedDatanodeCheck sleep for next "+extraSleep+" ms");
+        System.out.println("JEF: decommissionedDatanodeCheck sleep for next "+extraSleep+" ms");
         Thread.sleep(extraSleep);
       } catch (Exception ex) {
         FSNamesystem.LOG.error(ex.getMessage());
