@@ -1102,8 +1102,10 @@ public class NNThroughputBenchmark {
           replication = Short.parseShort(args.get(++i));
         } else if(args.get(i).equals("-isGEDA")) {
           isGeda = true;
-        } else if(!ignoreUnrelatedOptions)
-          printUsage();
+          System.out.println("JEF: isGEDA=" + isGeda);
+        }
+//        } else if(!ignoreUnrelatedOptions)
+//          printUsage();
       }
     }
 
