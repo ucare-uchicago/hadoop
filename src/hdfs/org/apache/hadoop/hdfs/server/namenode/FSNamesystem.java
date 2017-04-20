@@ -2298,17 +2298,19 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     public void run() {
       while (fsRunning) {
         try {
-          System.out.println("Replication Monitor Thread is running.. will check again after " + replicationRecheckInterval + "s");
+          System.out.println("Replication Monitor Thread is running.. will check again after " + replicationRecheckInterval + "ms");
           computeDatanodeWork();
+          System.out.println("done computeDatanodeWork()");
           processPendingReplications();
+          System.out.println("done processPendingReplications()");
           Thread.sleep(replicationRecheckInterval);
         } catch (InterruptedException ie) {
-          LOG.warn("ReplicationMonitor thread received InterruptedException." + ie);
+          System.out.println("WARN: ReplicationMonitor thread received InterruptedException." + ie);
           break;
         } catch (IOException ie) {
-          LOG.warn("ReplicationMonitor thread received exception. " + ie);
+          System.out.println("WARN: ReplicationMonitor thread received exception. " + ie);
         } catch (Throwable t) {
-          LOG.warn("ReplicationMonitor thread received Runtime exception. " + t);
+          System.out.println("WARN: ReplicationMonitor thread received Runtime exception. " + t);
           Runtime.getRuntime().exit(-1);
         }
       }
@@ -2342,6 +2344,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
           * ReplicationMonitor.INVALIDATE_WORK_PCT_PER_ITERATION / 100);
     }
 
+    System.out.println("JEF: going to computeReplicationWork");
     workFound = computeReplicationWork(blocksToProcess); 
     
     // Update FSNamesystemMetrics counters
