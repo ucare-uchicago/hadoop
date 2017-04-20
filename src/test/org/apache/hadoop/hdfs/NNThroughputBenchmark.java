@@ -1126,12 +1126,14 @@ public class NNThroughputBenchmark {
       ArrayList<TinyDatanode> aliveNodes = blockReportObject.generateInputsForGeda(ignore, nodesToDecommission);
       
       // stop replication monitor
-      nameNode.namesystem.replthread.interrupt();
+//      nameNode.namesystem.replthread.interrupt();
+      /*
       try {
         nameNode.namesystem.replthread.join();
       } catch(InterruptedException ei) {
         return;
       }
+      */
       // report blocks once
       int nrDatanodes = blockReportObject.getNumDatanodes();
       for(int idx=0; idx < nrDatanodes; idx++) {
