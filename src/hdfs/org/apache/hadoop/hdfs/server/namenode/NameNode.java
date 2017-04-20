@@ -622,6 +622,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                                        int xmitsInProgress,
                                        int xceiverCount) throws IOException {
     verifyRequest(nodeReg);
+    System.out.println("JEF: Send heartbeat..");
     return namesystem.handleHeartbeat(nodeReg, capacity, dfsUsed, remaining,
         xceiverCount, xmitsInProgress);
   }

@@ -2234,6 +2234,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         }
         //check pending replication
         if (cmd == null) {
+          System.out.println("JEF: nodeinfo.getReplicationCommand()");
           cmd = nodeinfo.getReplicationCommand(
               maxReplicationStreams - xmitsInProgress);
         }
@@ -2300,9 +2301,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         try {
           System.out.println("Replication Monitor Thread is running.. will check again after " + replicationRecheckInterval + "ms");
           computeDatanodeWork();
-          System.out.println("done computeDatanodeWork()");
           processPendingReplications();
-          System.out.println("done processPendingReplications()");
           Thread.sleep(replicationRecheckInterval);
         } catch (InterruptedException ie) {
           System.out.println("WARN: ReplicationMonitor thread received InterruptedException." + ie);

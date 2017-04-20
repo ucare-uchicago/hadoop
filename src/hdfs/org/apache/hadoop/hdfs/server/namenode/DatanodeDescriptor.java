@@ -308,6 +308,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
   
   BlockCommand getReplicationCommand(int maxTransfers) {
+	System.out.println("JEF: getReplicationCommand()");
     List<BlockTargetPair> blocktargetlist = replicateBlocks.poll(maxTransfers);
     return blocktargetlist == null? null:
         new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blocktargetlist);
