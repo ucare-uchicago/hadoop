@@ -666,6 +666,7 @@ public class DataNode extends Configured
           // -- Bytes remaining
           //
           lastHeartbeat = startTime;
+          System.out.println("JEF: Datanode send heartbeat to NN");
           DatanodeCommand cmd = namenode.sendHeartbeat(dnRegistration,
                                                        data.getCapacity(),
                                                        data.getDfsUsed(),
