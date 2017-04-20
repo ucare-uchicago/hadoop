@@ -2343,7 +2343,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
           * ReplicationMonitor.INVALIDATE_WORK_PCT_PER_ITERATION / 100);
     }
 
-    System.out.println("JEF: going to computeReplicationWork");
     workFound = computeReplicationWork(blocksToProcess); 
     
     // Update FSNamesystemMetrics counters
