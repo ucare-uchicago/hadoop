@@ -2234,7 +2234,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         }
         //check pending replication
         if (cmd == null) {
-          System.out.println("JEF: nodeinfo.getReplicationCommand()");
           cmd = nodeinfo.getReplicationCommand(
               maxReplicationStreams - xmitsInProgress);
         }
