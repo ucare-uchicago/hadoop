@@ -2298,6 +2298,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     public void run() {
       while (fsRunning) {
         try {
+          System.out.println("Replication Monitor Thread is running..");
           computeDatanodeWork();
           processPendingReplications();
           Thread.sleep(replicationRecheckInterval);

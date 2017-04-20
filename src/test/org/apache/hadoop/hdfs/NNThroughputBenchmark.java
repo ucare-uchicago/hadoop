@@ -771,6 +771,7 @@ public class NNThroughputBenchmark {
      * Send a heartbeat to the name-node and replicate blocks if requested.
      */
     int replicateBlocks() throws IOException {
+      System.out.println("JEF: replicate blocks");
       // register datanode
       DatanodeCommand cmd = nameNode.sendHeartbeat(
           dnRegistration, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, 0, 0);

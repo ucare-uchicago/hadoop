@@ -266,6 +266,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   void addBlockToBeReplicated(Block block, DatanodeDescriptor[] targets) {
     assert(block != null && targets != null && targets.length > 0);
+    System.out.println("JEF: addBlockToBeReplicated..");
     replicateBlocks.offer(block, targets);
   }
 
