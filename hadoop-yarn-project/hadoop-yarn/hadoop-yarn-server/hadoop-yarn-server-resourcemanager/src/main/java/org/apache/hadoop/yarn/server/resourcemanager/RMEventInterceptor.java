@@ -50,7 +50,7 @@ public class RMEventInterceptor {
             e.printStackTrace();
         }
         commitEvent();
-        waitAck();
+        //waitAck();
     }
 
 

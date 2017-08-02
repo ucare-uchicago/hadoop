@@ -137,7 +137,7 @@ public class CapacitySchedulerConfiguration extends Configuration {
 
   //huanke add my own boolean variables
   public static boolean interceptHadoop=false;
-  public static boolean interceptBug=true;
+  public static boolean interceptBug=false;
 
   public CapacitySchedulerConfiguration() {
     this(new Configuration());

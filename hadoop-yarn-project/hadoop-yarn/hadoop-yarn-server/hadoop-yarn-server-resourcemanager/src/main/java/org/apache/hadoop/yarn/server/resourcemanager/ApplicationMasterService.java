@@ -38,6 +38,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -101,6 +102,8 @@ public class ApplicationMasterService extends AbstractService implements
       recordFactory.newRecordInstance(AllocateResponse.class);
   private final RMContext rmContext;
 
+  private boolean dieOnAmCompletion = false;
+
   public ApplicationMasterService(RMContext rmContext, YarnScheduler scheduler) {
     super(ApplicationMasterService.class.getName());
     this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
@@ -118,6 +121,10 @@ public class ApplicationMasterService extends AbstractService implements
         YarnConfiguration.RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
+
+    dieOnAmCompletion = conf.getBoolean(
+        YarnConfiguration.RM_HACKS_DIE_ON_AM_COMPLETION,
+        YarnConfiguration.DEFAULT_RM_HACKS_DIE_ON_AM_COMPLETION);
 
     Configuration serverConf = conf;
     // If the auth is not-simple, enforce it to be token-based.
@@ -535,9 +542,15 @@ public class ApplicationMasterService extends AbstractService implements
   }
 
   public void unregisterAttempt(ApplicationAttemptId attemptId) {
-    LOG.info("Unregistering app attempt : " + attemptId);
-    responseMap.remove(attemptId);
-    rmContext.getNMTokenSecretManager().unregisterApplicationAttempt(attemptId);
+    if (dieOnAmCompletion) {
+      String msg = "kiling RM before unregistering app attempt : " + attemptId;
+      LOG.info("@riza " + msg);
+      System.exit(0);
+    } else {
+      LOG.info("Unregistering app attempt : " + attemptId);
+      responseMap.remove(attemptId);
+      rmContext.getNMTokenSecretManager().unregisterApplicationAttempt(attemptId);
+    }
   }
 
   public void refreshServiceAcls(Configuration configuration, 

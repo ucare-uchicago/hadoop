@@ -762,7 +762,11 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CLIENT_MAX_NM_PROXIES =
       YARN_PREFIX + "client.max-nodemanagers-proxies";
   public static final int DEFAULT_NM_CLIENT_MAX_NM_PROXIES = 500;
-  
+ 
+  public static final String RM_HACKS_DIE_ON_AM_COMPLETION =
+    RM_PREFIX + "hacks.die-on-am-completion";
+  public static final boolean DEFAULT_RM_HACKS_DIE_ON_AM_COMPLETION = false;
+ 
   public YarnConfiguration() {
     super();
   }

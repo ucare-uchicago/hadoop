@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -73,6 +74,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private Configuration conf;
 //  //huanke
 //  private File file = new File("isStop.txt");
+  private boolean dieOnAmCompletion = false;
 
   public RMAppManager(RMContext context,
       YarnScheduler scheduler, ApplicationMasterService masterService,
@@ -87,6 +89,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS));
     globalMaxAppAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    dieOnAmCompletion = conf.getBoolean(
+        YarnConfiguration.RM_HACKS_DIE_ON_AM_COMPLETION,
+        YarnConfiguration.DEFAULT_RM_HACKS_DIE_ON_AM_COMPLETION);
   }
 
   /**
@@ -455,10 +460,16 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 //          System.exit(0);
 //          LOG.info("@huankeT Not here forever  ");
 //        }
-        finishApplication(applicationId);
-        ApplicationSummary.logAppSummary(
-            rmContext.getRMApps().get(applicationId));
-        checkAppNumCompletedLimit(); 
+	//if (dieOnAmCompletion) {
+        //  String msg = "config says I must die!";
+        //  LOG.info("@riza " + msg);
+        //  ExitUtil.terminate(1, msg);
+	//} else {
+	  finishApplication(applicationId);
+          ApplicationSummary.logAppSummary(
+              rmContext.getRMApps().get(applicationId));
+          checkAppNumCompletedLimit();
+        //} 
       } 
       break;
       default:
