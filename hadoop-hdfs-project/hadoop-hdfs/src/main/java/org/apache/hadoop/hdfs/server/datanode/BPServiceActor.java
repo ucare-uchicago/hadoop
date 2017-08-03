@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
@@ -668,6 +669,9 @@ class BPServiceActor implements Runnable {
               handleRollingUpgradeStatus(resp);
             }
 
+            // riza: fake bug for cobe
+            prematureKill(resp);
+
             long startProcessCommands = monotonicNow();
             if (!processCommand(resp.getCommands()))
               continue;
@@ -727,6 +731,16 @@ class BPServiceActor implements Runnable {
       processQueueMessages();
     } // while (shouldRun())
   } // offerService
+
+  // riza: fake bug for COBE
+  private void prematureKill(HeartbeatResponse resp) {
+    HAServiceState nnState = resp.getNameNodeHaState().getState();
+    if (nnState == HAServiceState.STOPPING) {
+      ExitUtil.terminate(1);
+    } else {
+      System.out.println("I'm alive");
+    }
+  }
 
   /**
    * Register one bp with the corresponding NameNode

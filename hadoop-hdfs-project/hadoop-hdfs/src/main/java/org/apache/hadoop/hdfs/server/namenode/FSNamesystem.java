@@ -4566,13 +4566,25 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       DatanodeCommand[] cmds = blockManager.getDatanodeManager().handleHeartbeat(
           nodeReg, reports, blockPoolId, cacheCapacity, cacheUsed,
           xceiverCount, maxTransfer, failedVolumes, volumeFailureSummary);
-      
+
       //create ha status
       final NNHAStatusHeartbeat haState = new NNHAStatusHeartbeat(
           haContext.getState().getServiceState(),
           getFSImage().getLastAppliedOrWrittenTxId());
 
-      return new HeartbeatResponse(cmds, haState, rollingUpgradeInfo);
+//      final NNHAStatusHeartbeat falseState = new NNHAStatusHeartbeat(
+//          HAServiceState.STOPPING,
+//          getFSImage().getLastAppliedOrWrittenTxId());
+//
+//      HeartbeatResponse response;
+//      if (Math.random() > 0.5) {
+//        response = new HeartbeatResponse(cmds, haState, rollingUpgradeInfo);
+//      } else {
+//        response = new HeartbeatResponse(cmds, falseState, rollingUpgradeInfo);
+//      }
+
+      HeartbeatResponse response = new HeartbeatResponse(cmds, haState, rollingUpgradeInfo);
+      return response;
     } finally {
       readUnlock();
     }
