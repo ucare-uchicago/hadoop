@@ -87,7 +87,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -154,7 +153,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   private Configuration conf;
   private String user;
-  
+
+  // riza: samc
+  private boolean isInterceptEvent = false;
+  private String samcIpcDir = "/tmp/ipc";
+
   private static final ExpiredTransition EXPIRED_TRANSITION =
       new ExpiredTransition();
 
@@ -386,6 +389,14 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     
     this.stateMachine = stateMachineFactory.make(this);
     this.user = user;
+
+    this.isInterceptEvent =
+        conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+            YarnConfiguration.DEFAULT_SAMC_INTERCEPT_BUG);
+
+    if (isInterceptEvent) {
+      this.samcIpcDir = conf.get(YarnConfiguration.SAMC_IPC_DIR);
+    }
   }
 
   @Override
@@ -1052,8 +1063,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       if(!appAttempt.submissionContext.getUnmanagedAM()) {
         LOG.info("@huanke Tell the launcher to cleanup");
 //        //huanke
-        if (CapacitySchedulerConfiguration.interceptHadoop) {
-          RMEventInterceptor interceptor = new RMEventInterceptor(Role.RM, Role.NM, 1, RMInterceptEventType.AMCleanup);
+        if (appAttempt.isInterceptEvent) {
+          RMEventInterceptor interceptor =
+              new RMEventInterceptor(appAttempt.samcIpcDir, Role.RM, Role.NM, 1,
+                  RMInterceptEventType.AMCleanup);
           interceptor.printString();
           if (interceptor.getSAMCResponse()) {
             LOG.info("@HK -> SAMC response to RMCommunicator to enbale AMCleanup");
@@ -1254,20 +1267,26 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }
   }
 
-  private void launchAttempt(){
+  private void launchAttempt() {
     // Send event to launch the AM Container
-    //huanke
-    if(CapacitySchedulerConfiguration.interceptHadoop){
-      RMEventInterceptor interceptor1=new RMEventInterceptor(Role.RM, Role.NM,1, RMInterceptEventType.AMLauncheee);
+    // huanke
+    if (this.isInterceptEvent) {
+      RMEventInterceptor interceptor1 = new RMEventInterceptor(samcIpcDir,
+          Role.RM, Role.NM,
+          1, RMInterceptEventType.AMLauncheee);
       interceptor1.printString();
-      if (interceptor1.getSAMCResponse()){
-        LOG.info("@HK -> SAMC response to RMCommunicator to enable AMLauncheee");
-        eventHandler.handle(new AMLauncherEvent(AMLauncherEventType.LAUNCH, this));
-      }else {
-        LOG.info("@HK -> SAMC response to RMCommunicator to disable AMLauncheee");
+      if (interceptor1.getSAMCResponse()) {
+        LOG.info(
+            "@HK -> SAMC response to RMCommunicator to enable AMLauncheee");
+        eventHandler
+            .handle(new AMLauncherEvent(AMLauncherEventType.LAUNCH, this));
+      } else {
+        LOG.info(
+            "@HK -> SAMC response to RMCommunicator to disable AMLauncheee");
       }
-    }else {
-      eventHandler.handle(new AMLauncherEvent(AMLauncherEventType.LAUNCH, this));
+    } else {
+      eventHandler
+          .handle(new AMLauncherEvent(AMLauncherEventType.LAUNCH, this));
     }
   }
   

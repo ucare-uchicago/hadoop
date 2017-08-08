@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy;
 import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy.ContainerManagementProtocolProxyData;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -80,9 +81,10 @@ public class ContainerLauncherImpl extends AbstractService implements
       new LinkedBlockingQueue<ContainerLauncherEvent>();
   private final AtomicBoolean stopped;
   private ContainerManagementProtocolProxy cmProxy;
-  //huanke
-  public boolean interceptHadoop=false;
-  public boolean isInterceptBug=true;
+
+  // riza: samc
+  private boolean isInterceptEvent = false;
+  private String samcIpcDir = "/tmp/ipc";
 
   private Container getContainer(ContainerLauncherEvent event) {
     ContainerId id = event.getContainerID();
@@ -254,6 +256,13 @@ public class ContainerLauncherImpl extends AbstractService implements
     LOG.info("Upper limit on the thread pool size is " + this.limitOnPoolSize);
     super.serviceInit(conf);
     cmProxy = new ContainerManagementProtocolProxy(conf);
+
+    isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+        YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
+
+    if (isInterceptEvent) {
+      this.samcIpcDir = conf.get(YarnConfiguration.SAMC_IPC_DIR);
+    }
   }
 
   protected void serviceStart() throws Exception {
@@ -371,30 +380,36 @@ public class ContainerLauncherImpl extends AbstractService implements
 
       case CONTAINER_REMOTE_LAUNCH:
         //huanke
-        if (interceptHadoop){
-          EventInterceptor interceptor1=new EventInterceptor(Role.AM, Role.NM,1, InterceptEventType.CONTAINER_REMOTE_LAUNCH);
+        if (isInterceptEvent) {
+          EventInterceptor interceptor1 = new EventInterceptor(samcIpcDir,
+              Role.AM, Role.NM, 1, InterceptEventType.CONTAINER_REMOTE_LAUNCH);
           interceptor1.printString();
-          if(interceptor1.getSAMCResponse()){
-            LOG.info("@HK -> SAMC response to RMCommunicator to enable CONTAINER_REMOTE_LAUNCH");
-          ContainerRemoteLaunchEvent launchEvent = (ContainerRemoteLaunchEvent) event;
-          c.launch(launchEvent);
+          if (interceptor1.getSAMCResponse()) {
+            LOG.info(
+                "@HK -> SAMC response to RMCommunicator to enable CONTAINER_REMOTE_LAUNCH");
+            ContainerRemoteLaunchEvent launchEvent =
+                (ContainerRemoteLaunchEvent) event;
+            c.launch(launchEvent);
           }
-        }else{
-          ContainerRemoteLaunchEvent launchEvent = (ContainerRemoteLaunchEvent) event;
+        } else {
+          ContainerRemoteLaunchEvent launchEvent =
+              (ContainerRemoteLaunchEvent) event;
           c.launch(launchEvent);
         }
         break;
 
       case CONTAINER_REMOTE_CLEANUP:
         //huanke
-        if (interceptHadoop) {
-          EventInterceptor interceptor2 = new EventInterceptor(Role.AM, Role.NM, 1, InterceptEventType.CONTAINER_REMOTE_CLEANUP);
+        if (isInterceptEvent) {
+          EventInterceptor interceptor2 = new EventInterceptor(samcIpcDir,
+              Role.AM, Role.NM, 1, InterceptEventType.CONTAINER_REMOTE_CLEANUP);
           interceptor2.printString();
           if (interceptor2.getSAMCResponse()) {
-            LOG.info("@HK -> SAMC response to RMCommunicator to enable CONTAINER_REMOTE_CLEANUP");
+            LOG.info(
+                "@HK -> SAMC response to RMCommunicator to enable CONTAINER_REMOTE_CLEANUP");
             c.kill();
           }
-        }else{
+        } else {
           c.kill();
         }
         break;

@@ -762,11 +762,25 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CLIENT_MAX_NM_PROXIES =
       YARN_PREFIX + "client.max-nodemanagers-proxies";
   public static final int DEFAULT_NM_CLIENT_MAX_NM_PROXIES = 500;
- 
+
+  ////////////////////////////////
+  // SAMC Configs
+  ////////////////////////////////
+
   public static final String RM_HACKS_DIE_ON_AM_COMPLETION =
     RM_PREFIX + "hacks.die-on-am-completion";
   public static final boolean DEFAULT_RM_HACKS_DIE_ON_AM_COMPLETION = false;
- 
+
+  public static final String SAMC_INTERCEPT_EVENT =
+      YARN_PREFIX + "samc.intercept-event";
+  public static final boolean DEFAULT_SAMC_INTERCEPT_EVENT = false;
+
+  public static final String SAMC_INTERCEPT_BUG =
+      YARN_PREFIX + "samc.intercept-bug";
+  public static final boolean DEFAULT_SAMC_INTERCEPT_BUG = false;
+
+  public static final String SAMC_IPC_DIR = YARN_PREFIX + "samc.ipc-dir";
+
   public YarnConfiguration() {
     super();
   }

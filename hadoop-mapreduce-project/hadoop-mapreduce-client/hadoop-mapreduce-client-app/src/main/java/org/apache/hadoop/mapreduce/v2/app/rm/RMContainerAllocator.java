@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.client.api.NMTokenCache;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.RackResolver;
@@ -95,6 +96,10 @@ public class RMContainerAllocator extends RMContainerRequestor
 
   private Thread eventHandlingThread;
   private final AtomicBoolean stopped;
+
+  // riza: samc
+  private boolean isInterceptEvent = false;
+  private String samcIpcDir = "/tmp/ipc";
 
   static {
     PRIORITY_FAST_FAIL_MAP = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(Priority.class);
@@ -178,6 +183,13 @@ public class RMContainerAllocator extends RMContainerRequestor
     // Init startTime to current time. If all goes well, it will be reset after
     // first attempt to contact RM.
     retrystartTime = System.currentTimeMillis();
+
+    isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+        YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
+
+    if (isInterceptEvent) {
+      this.samcIpcDir = conf.get(YarnConfiguration.SAMC_IPC_DIR);
+    }
   }
 
   @Override
@@ -221,17 +233,19 @@ public class RMContainerAllocator extends RMContainerRequestor
     scheduleStats.updateAndLogIfChanged("Before Scheduling: ");
     List<Container> allocatedContainers = getResources(); //it will tirgger RMContainerRequestor to ask for containers from RM
     if (allocatedContainers.size() > 0) {
-      //huanke
-      if(interceptHadoop){
-        EventInterceptor interceptor=new EventInterceptor(Role.AM, Role.RM,1, InterceptEventType.HeartbeatWith);
+      // huanke
+      if (isInterceptEvent) {
+        EventInterceptor interceptor = new EventInterceptor(samcIpcDir, Role.AM,
+            Role.RM, 1, InterceptEventType.HeartbeatWith);
         interceptor.printString();
-        if (interceptor.getSAMCResponse()){
-          LOG.info("@HK -> SAMC response to RMCommunicator to enable HeartbeatWith");
+        if (interceptor.getSAMCResponse()) {
+          LOG.info(
+              "@HK -> SAMC response to RMCommunicator to enable HeartbeatWith");
           scheduledRequests.assign(allocatedContainers);
         }
-      }else{
-          scheduledRequests.assign(allocatedContainers);
-        }
+      } else {
+        scheduledRequests.assign(allocatedContainers);
+      }
     }
 
     int completedMaps = getJob().getCompletedMaps();

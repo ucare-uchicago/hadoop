@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -184,6 +185,10 @@ public abstract class RMStateStore {
   
   AsyncDispatcher dispatcher;
   
+  // riza: samc
+  private boolean isInterceptEvent = false;
+  private String samcIpcDir = "/tmp/ipc";
+
   public synchronized void init(Configuration conf) throws Exception{    
     // create async handler
     dispatcher = new AsyncDispatcher();
@@ -193,6 +198,13 @@ public abstract class RMStateStore {
     dispatcher.start();
     
     initInternal(conf);
+
+    isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+        YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
+
+    if (isInterceptEvent) {
+      this.samcIpcDir = conf.get(YarnConfiguration.SAMC_IPC_DIR);
+    }
   }
 
   /**
@@ -236,16 +248,16 @@ public abstract class RMStateStore {
     ApplicationState appState = new ApplicationState(
         app.getSubmitTime(), context, app.getUser());
     //huanke
-    if(CapacitySchedulerConfiguration.interceptBug){
-      RMEventInterceptor interceptor=new RMEventInterceptor(Role.RM, Role.RM, 1 , RMInterceptEventType.Store_StateStore);
+    if (isInterceptEvent) {
+      RMEventInterceptor interceptor = new RMEventInterceptor(samcIpcDir,
+          Role.RM, Role.RM, 1, RMInterceptEventType.Store_StateStore);
       interceptor.printString();
-      if (interceptor.getSAMCResponse()){
+      if (interceptor.getSAMCResponse()) {
         dispatcher.getEventHandler().handle(new RMStateStoreAppEvent(appState));
       }
-    }else{
+    } else {
       dispatcher.getEventHandler().handle(new RMStateStoreAppEvent(appState));
     }
-
   }
     
   /**
@@ -381,13 +393,17 @@ public abstract class RMStateStore {
    */
   public synchronized void removeApplication(ApplicationState appState) {
     //huanke
-    if(CapacitySchedulerConfiguration.interceptBug){
-      RMEventInterceptor eventInterceptor=new RMEventInterceptor(Role.RM, Role.RM, 1, RMInterceptEventType.Remove_StateStore);
+    if (isInterceptEvent) {
+      RMEventInterceptor eventInterceptor = new RMEventInterceptor(samcIpcDir,
+          Role.RM, Role.RM, 1, RMInterceptEventType.Remove_StateStore);
       eventInterceptor.printString();
-      if (eventInterceptor.getSAMCResponse()){
-        dispatcher.getEventHandler().handle(new RMStateStoreRemoveAppEvent(appState));}
-    }else {
-      dispatcher.getEventHandler().handle(new RMStateStoreRemoveAppEvent(appState));
+      if (eventInterceptor.getSAMCResponse()) {
+        dispatcher.getEventHandler()
+            .handle(new RMStateStoreRemoveAppEvent(appState));
+      }
+    } else {
+      dispatcher.getEventHandler()
+          .handle(new RMStateStoreRemoveAppEvent(appState));
     }
   }
 

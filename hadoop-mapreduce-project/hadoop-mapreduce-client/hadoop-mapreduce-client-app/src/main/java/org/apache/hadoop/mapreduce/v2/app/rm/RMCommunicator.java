@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -87,9 +88,9 @@ public abstract class RMCommunicator extends AbstractService
   protected volatile boolean isSignalled = false;
   private volatile boolean shouldUnregister = true;
 
-  //huanke
-  public boolean interceptHadoop=false;
-  public boolean isInterceptBug=true;
+  // riza: samc
+  private boolean isInterceptEvent = false;
+  private String samcIpcDir = "/tmp/ipc";
 
   public RMCommunicator(ClientService clientService, AppContext context) {
     super("RMCommunicator");
@@ -107,6 +108,13 @@ public abstract class RMCommunicator extends AbstractService
     rmPollInterval =
         conf.getInt(MRJobConfig.MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS,
             MRJobConfig.DEFAULT_MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS);
+
+    isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+        YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
+
+    if (isInterceptEvent) {
+      this.samcIpcDir = conf.get(YarnConfiguration.SAMC_IPC_DIR);
+    }
   }
 
   @Override
@@ -153,28 +161,30 @@ public abstract class RMCommunicator extends AbstractService
         request.setTrackingUrl(serviceAddr.getHostName() + ":" + clientService.getHttpPort());
       }
       //huanke
-      if(interceptHadoop){
-        EventInterceptor interceptor=new EventInterceptor(Role.AM, Role.RM,1, InterceptEventType.AMRegister);
+      if (isInterceptEvent) {
+        EventInterceptor interceptor = new EventInterceptor(samcIpcDir, Role.AM,
+            Role.RM, 1, InterceptEventType.AMRegister);
         interceptor.printString();
-        if(interceptor.getSAMCResponse()){
-          LOG.info("@HK -> SAMC response to RMCommunicator to enable RegisterApplicationMaster");
+        if (interceptor.getSAMCResponse()) {
+          LOG.info(
+              "@HK -> SAMC response to RMCommunicator to enable RegisterApplicationMaster");
           RegisterApplicationMasterResponse response =
-            scheduler.registerApplicationMaster(request);
+              scheduler.registerApplicationMaster(request);
           maxContainerCapability = response.getMaximumResourceCapability();
-          this.context.getClusterInfo().setMaxContainerCapability(
-              maxContainerCapability);
+          this.context.getClusterInfo()
+              .setMaxContainerCapability(maxContainerCapability);
           if (UserGroupInformation.isSecurityEnabled()) {
             setClientToAMToken(response.getClientToAMTokenMasterKey());
           }
           this.applicationACLs = response.getApplicationACLs();
         }
-      }else{
+      } else {
         LOG.info("@HK -> RMCommunicator without interceptHadoop");
         RegisterApplicationMasterResponse response =
-                scheduler.registerApplicationMaster(request);
+            scheduler.registerApplicationMaster(request);
         maxContainerCapability = response.getMaximumResourceCapability();
-        this.context.getClusterInfo().setMaxContainerCapability(
-                maxContainerCapability);
+        this.context.getClusterInfo()
+            .setMaxContainerCapability(maxContainerCapability);
         if (UserGroupInformation.isSecurityEnabled()) {
           setClientToAMToken(response.getClientToAMTokenMasterKey());
         }
@@ -219,14 +229,16 @@ public abstract class RMCommunicator extends AbstractService
           FinishApplicationMasterRequest.newInstance(finishState,
             sb.toString(), historyUrl);
       //huanke
-      if(interceptHadoop){
-        EventInterceptor interceptor=new EventInterceptor(Role.AM, Role.RM,1, InterceptEventType.AMUnRegister);
+      if (isInterceptEvent) {
+        EventInterceptor interceptor = new EventInterceptor(samcIpcDir, Role.AM,
+            Role.RM, 1, InterceptEventType.AMUnRegister);
         interceptor.printString();
-        if(interceptor.getSAMCResponse()){
+        if (interceptor.getSAMCResponse()) {
           scheduler.finishApplicationMaster(request);
-          LOG.info("@HK -> SAMC response to RMCommunicator to enable UnregisterApplicationMaster");
+          LOG.info(
+              "@HK -> SAMC response to RMCommunicator to enable UnregisterApplicationMaster");
         }
-      }else{
+      } else {
         scheduler.finishApplicationMaster(request);
       }
     } catch(Exception are) {
