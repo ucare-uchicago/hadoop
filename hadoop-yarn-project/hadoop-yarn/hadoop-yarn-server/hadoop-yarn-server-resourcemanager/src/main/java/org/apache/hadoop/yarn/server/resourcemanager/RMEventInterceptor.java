@@ -57,7 +57,7 @@ public class RMEventInterceptor {
       e.printStackTrace();
     }
     commitEvent();
-    // waitAck();
+    waitAck();
   }
 
   public int getRoleId(Role role) {
@@ -112,6 +112,7 @@ public class RMEventInterceptor {
     File ackFile = new File(ackFileName);
 
     // step1 wait for ackFile in /tmp/ipc/ack/ackFile
+    LOG.info("@HK Step1 -> waiting for ack File " + ackFileName + "...");
     while (!ackFile.exists()) {
       try {
         Thread.sleep(100);
@@ -119,7 +120,6 @@ public class RMEventInterceptor {
         e.printStackTrace();
       }
     }
-    LOG.info("@HK Step1 -> wait for ack File " + ackFileName);
 
     // step2 read the execute=true or false in ackFile
     try {

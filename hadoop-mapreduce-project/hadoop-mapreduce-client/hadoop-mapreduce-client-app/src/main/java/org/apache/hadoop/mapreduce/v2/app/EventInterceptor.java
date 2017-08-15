@@ -43,6 +43,8 @@ public class EventInterceptor {
     filename = createFileName();
     samcResponse = false;
 
+    printString();
+
     // begin to write /new/filename
     try {
       String newFileName = fileDir + "/new/" + filename;
@@ -50,15 +52,15 @@ public class EventInterceptor {
       writer.print("sendNode=" + this.sendNode + "\n");
       writer.print("recvNode=" + this.recvNode + "\n");
       writer.print("nodeState=" + this.nodeState + "\n");
-      writer.print("interceptEventType=" + interceptEventTypeId + "\n");
-      writer.print("type=" + this.interceptEventType + "\n");
+      writer.print("eventTypeId=" + interceptEventTypeId + "\n");
+      writer.print("eventType=" + this.interceptEventType + "\n");
       writer.print("eventId=" + eventId);
       writer.close();
     } catch (IOException e) {
       e.printStackTrace();
     }
     commitEvent();
-    // waitAck();
+    waitAck();
   }
 
   public int getRoleId(Role role) {
@@ -125,6 +127,7 @@ public class EventInterceptor {
     File ackFile = new File(ackFileName);
 
     // step1 wait for ackFile in /tmp/ipc/ack/ackFile
+    LOG.info("@HK Step1 -> waiting for ack File " + ackFileName + "...");
     while (!ackFile.exists()) {
       try {
         Thread.sleep(100);
@@ -132,7 +135,6 @@ public class EventInterceptor {
         e.printStackTrace();
       }
     }
-    LOG.info("@HK Step1 -> wait for ack File " + ackFileName);
 
     // step2 read the execute=true or false in ackFile
     try {
