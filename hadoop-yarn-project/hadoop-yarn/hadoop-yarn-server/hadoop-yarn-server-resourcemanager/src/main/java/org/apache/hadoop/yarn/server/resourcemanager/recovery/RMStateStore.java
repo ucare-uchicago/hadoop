@@ -43,19 +43,19 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.samc.EventInterceptor;
+import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.NodeRole;
+import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
-import org.apache.hadoop.yarn.server.resourcemanager.RMEventInterceptor;
-import org.apache.hadoop.yarn.server.resourcemanager.RMInterceptEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.Role;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppStoredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStoredEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 
 @Private
 @Unstable
@@ -187,7 +187,6 @@ public abstract class RMStateStore {
   
   // riza: samc
   private boolean isInterceptEvent = false;
-  private String samcIpcDir = "/tmp/ipc";
 
   public synchronized void init(Configuration conf) throws Exception{    
     // create async handler
@@ -201,10 +200,6 @@ public abstract class RMStateStore {
 
     isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
         YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
-
-    if (isInterceptEvent) {
-      this.samcIpcDir = conf.get(YarnConfiguration.SAMC_IPC_DIR);
-    }
   }
 
   /**
@@ -249,10 +244,11 @@ public abstract class RMStateStore {
         app.getSubmitTime(), context, app.getUser());
     //huanke
     if (isInterceptEvent) {
-      RMEventInterceptor interceptor = new RMEventInterceptor(samcIpcDir,
-          Role.RM, Role.RM, 1, RMInterceptEventType.Store_StateStore);
-      interceptor.printString();
-      if (interceptor.getSAMCResponse()) {
+      EventInterceptor interceptor = new EventInterceptor(
+          NodeRole.RM, NodeRole.RM, NodeState.ALIVE, InterceptedEventType.Store_StateStore);
+      interceptor.printToLog();
+      interceptor.submitAndWait();
+      if (interceptor.hasSAMCResponse()) {
         dispatcher.getEventHandler().handle(new RMStateStoreAppEvent(appState));
       }
     } else {
@@ -394,10 +390,12 @@ public abstract class RMStateStore {
   public synchronized void removeApplication(ApplicationState appState) {
     //huanke
     if (isInterceptEvent) {
-      RMEventInterceptor eventInterceptor = new RMEventInterceptor(samcIpcDir,
-          Role.RM, Role.RM, 1, RMInterceptEventType.Remove_StateStore);
-      eventInterceptor.printString();
-      if (eventInterceptor.getSAMCResponse()) {
+
+      EventInterceptor interceptor = new EventInterceptor(
+          NodeRole.RM, NodeRole.RM, NodeState.ALIVE, InterceptedEventType.Remove_StateStore);
+      interceptor.printToLog();
+      interceptor.submitAndWait();
+      if (interceptor.hasSAMCResponse()) {
         dispatcher.getEventHandler()
             .handle(new RMStateStoreRemoveAppEvent(appState));
       }

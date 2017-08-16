@@ -59,6 +59,10 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.samc.EventInterceptor;
+import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.NodeRole;
+import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSelector;
@@ -97,9 +101,6 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.resource.Resources;
-//import org.apache.hadoop.yarn.server.resourcemanager.RMEventInterceptor;
-//import org.apache.hadoop.yarn.server.resourcemanager.InterceptEventType;
-//import org.apache.hadoop.yarn.server.resourcemanager.Role;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
@@ -156,7 +157,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   // riza: samc
   private boolean isInterceptEvent = false;
-  private String samcIpcDir = "/tmp/ipc";
 
   private static final ExpiredTransition EXPIRED_TRANSITION =
       new ExpiredTransition();
@@ -393,10 +393,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.isInterceptEvent =
         conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
             YarnConfiguration.DEFAULT_SAMC_INTERCEPT_BUG);
-
-    if (isInterceptEvent) {
-      this.samcIpcDir = conf.get(YarnConfiguration.SAMC_IPC_DIR);
-    }
   }
 
   @Override
@@ -1064,11 +1060,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         LOG.info("@huanke Tell the launcher to cleanup");
 //        //huanke
         if (appAttempt.isInterceptEvent) {
-          RMEventInterceptor interceptor =
-              new RMEventInterceptor(appAttempt.samcIpcDir, Role.RM, Role.NM, 1,
-                  RMInterceptEventType.AMCleanup);
-          interceptor.printString();
-          if (interceptor.getSAMCResponse()) {
+          EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
+              NodeRole.NM, NodeState.ALIVE, InterceptedEventType.AMCleanup);
+          interceptor.printToLog();
+          interceptor.submitAndWait();
+          if (interceptor.hasSAMCResponse()) {
             LOG.info("@HK -> SAMC response to RMCommunicator to enbale AMCleanup");
             appAttempt.eventHandler.handle(new AMLauncherEvent(
                     AMLauncherEventType.CLEANUP, appAttempt));
@@ -1271,11 +1267,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     // Send event to launch the AM Container
     // huanke
     if (this.isInterceptEvent) {
-      RMEventInterceptor interceptor1 = new RMEventInterceptor(samcIpcDir,
-          Role.RM, Role.NM,
-          1, RMInterceptEventType.AMLauncheee);
-      interceptor1.printString();
-      if (interceptor1.getSAMCResponse()) {
+      EventInterceptor interceptor = new EventInterceptor(NodeRole.RM, NodeRole.NM,
+          NodeState.ALIVE, InterceptedEventType.AMLauncheee);
+      interceptor.printToLog();
+      interceptor.submitAndWait();
+      if (interceptor.hasSAMCResponse()) {
         LOG.info(
             "@HK -> SAMC response to RMCommunicator to enable AMLauncheee");
         eventHandler

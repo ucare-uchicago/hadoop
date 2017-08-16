@@ -39,9 +39,6 @@ import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
-import org.apache.hadoop.mapreduce.v2.app.EventInterceptor;
-import org.apache.hadoop.mapreduce.v2.app.InterceptEventType;
-import org.apache.hadoop.mapreduce.v2.app.Role;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerLaunchedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
@@ -59,6 +56,10 @@ import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy;
 import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy.ContainerManagementProtocolProxyData;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.samc.EventInterceptor;
+import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.NodeRole;
+import org.apache.hadoop.yarn.samc.NodeState;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -84,7 +85,6 @@ public class ContainerLauncherImpl extends AbstractService implements
 
   // riza: samc
   private boolean isInterceptEvent = false;
-  private String samcIpcDir = "/tmp/ipc";
 
   private Container getContainer(ContainerLauncherEvent event) {
     ContainerId id = event.getContainerID();
@@ -259,10 +259,6 @@ public class ContainerLauncherImpl extends AbstractService implements
 
     isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
         YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
-
-    if (isInterceptEvent) {
-      this.samcIpcDir = conf.get(YarnConfiguration.SAMC_IPC_DIR);
-    }
   }
 
   protected void serviceStart() throws Exception {
@@ -381,10 +377,12 @@ public class ContainerLauncherImpl extends AbstractService implements
       case CONTAINER_REMOTE_LAUNCH:
         //huanke
         if (isInterceptEvent) {
-          EventInterceptor interceptor1 = new EventInterceptor(samcIpcDir,
-              Role.AM, Role.NM, 1, InterceptEventType.CONTAINER_REMOTE_LAUNCH);
-          interceptor1.printString();
-          if (interceptor1.getSAMCResponse()) {
+          EventInterceptor interceptor =
+              new EventInterceptor(NodeRole.AM, NodeRole.NM, NodeState.ALIVE,
+                  InterceptedEventType.CONTAINER_REMOTE_LAUNCH);
+          interceptor.printToLog();
+          interceptor.hasSAMCResponse();
+          if (interceptor.hasSAMCResponse()) {
             LOG.info(
                 "@HK -> SAMC response to RMCommunicator to enable CONTAINER_REMOTE_LAUNCH");
             ContainerRemoteLaunchEvent launchEvent =
@@ -401,10 +399,12 @@ public class ContainerLauncherImpl extends AbstractService implements
       case CONTAINER_REMOTE_CLEANUP:
         //huanke
         if (isInterceptEvent) {
-          EventInterceptor interceptor2 = new EventInterceptor(samcIpcDir,
-              Role.AM, Role.NM, 1, InterceptEventType.CONTAINER_REMOTE_CLEANUP);
-          interceptor2.printString();
-          if (interceptor2.getSAMCResponse()) {
+          EventInterceptor interceptor =
+              new EventInterceptor(NodeRole.AM, NodeRole.NM, NodeState.ALIVE,
+                  InterceptedEventType.CONTAINER_REMOTE_CLEANUP);
+          interceptor.printToLog();
+          interceptor.hasSAMCResponse();
+          if (interceptor.hasSAMCResponse()) {
             LOG.info(
                 "@HK -> SAMC response to RMCommunicator to enable CONTAINER_REMOTE_CLEANUP");
             c.kill();

@@ -46,9 +46,6 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
-import org.apache.hadoop.mapreduce.v2.app.EventInterceptor;
-import org.apache.hadoop.mapreduce.v2.app.InterceptEventType;
-import org.apache.hadoop.mapreduce.v2.app.Role;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
@@ -75,6 +72,9 @@ import org.apache.hadoop.yarn.client.api.NMTokenCache;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.samc.EventInterceptor;
+import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.NodeRole;
 import org.apache.hadoop.yarn.util.RackResolver;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -99,7 +99,6 @@ public class RMContainerAllocator extends RMContainerRequestor
 
   // riza: samc
   private boolean isInterceptEvent = false;
-  private String samcIpcDir = "/tmp/ipc";
 
   static {
     PRIORITY_FAST_FAIL_MAP = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(Priority.class);
@@ -186,10 +185,6 @@ public class RMContainerAllocator extends RMContainerRequestor
 
     isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
         YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
-
-    if (isInterceptEvent) {
-      this.samcIpcDir = conf.get(YarnConfiguration.SAMC_IPC_DIR);
-    }
   }
 
   @Override
@@ -235,10 +230,12 @@ public class RMContainerAllocator extends RMContainerRequestor
     if (allocatedContainers.size() > 0) {
       // huanke
       if (isInterceptEvent) {
-        EventInterceptor interceptor = new EventInterceptor(samcIpcDir, Role.AM,
-            Role.RM, 1, InterceptEventType.HeartbeatWith);
-        interceptor.printString();
-        if (interceptor.getSAMCResponse()) {
+        EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
+            NodeRole.RM, org.apache.hadoop.yarn.samc.NodeState.ALIVE,
+            InterceptedEventType.HeartbeatWith);
+        interceptor.printToLog();
+        interceptor.submitAndWait();
+        if (interceptor.hasSAMCResponse()) {
           LOG.info(
               "@HK -> SAMC response to RMCommunicator to enable HeartbeatWith");
           scheduledRequests.assign(allocatedContainers);
