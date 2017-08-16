@@ -381,7 +381,7 @@ public class ContainerLauncherImpl extends AbstractService implements
               new EventInterceptor(NodeRole.AM, NodeRole.NM, NodeState.ALIVE,
                   InterceptedEventType.CONTAINER_REMOTE_LAUNCH);
           interceptor.printToLog();
-          interceptor.hasSAMCResponse();
+          interceptor.submitAndWait();
           if (interceptor.hasSAMCResponse()) {
             LOG.info(
                 "@HK -> SAMC response to RMCommunicator to enable CONTAINER_REMOTE_LAUNCH");
@@ -403,7 +403,7 @@ public class ContainerLauncherImpl extends AbstractService implements
               new EventInterceptor(NodeRole.AM, NodeRole.NM, NodeState.ALIVE,
                   InterceptedEventType.CONTAINER_REMOTE_CLEANUP);
           interceptor.printToLog();
-          interceptor.hasSAMCResponse();
+          interceptor.submitAndWait();
           if (interceptor.hasSAMCResponse()) {
             LOG.info(
                 "@HK -> SAMC response to RMCommunicator to enable CONTAINER_REMOTE_CLEANUP");
