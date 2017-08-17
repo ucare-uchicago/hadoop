@@ -27,12 +27,18 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRetentionPolicy;
+import org.apache.hadoop.yarn.samc.EventInterceptor;
+import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.NodeRole;
+import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
@@ -68,6 +74,9 @@ public class ApplicationImpl implements Application {
   private final WriteLock writeLock;
   private final Context context;
 
+  // riza: samc
+  private boolean isInterceptEvent = false;
+
   private static final Log LOG = LogFactory.getLog(Application.class);
 
   Map<ContainerId, Container> containers =
@@ -86,6 +95,10 @@ public class ApplicationImpl implements Application {
     readLock = lock.readLock();
     writeLock = lock.writeLock();
     stateMachine = stateMachineFactory.make(this);
+
+    Configuration conf = new YarnConfiguration();
+    isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+        YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
   }
 
   @Override
@@ -207,8 +220,25 @@ public class ApplicationImpl implements Application {
   @SuppressWarnings("unchecked")
   static class AppInitTransition implements
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
+    // riza: intercept AM init here
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
+      if (app.isInterceptEvent) {
+        EventInterceptor interceptor =
+            new EventInterceptor(NodeRole.NM, NodeRole.AM, NodeState.ALIVE,
+                InterceptedEventType.NM_INIT_APPLICATION);
+        interceptor.printToLog();
+        interceptor.submitAndWait();
+        if (interceptor.hasSAMCResponse()) {
+          LOG.info("samc: SAMC response to NM to enable AM init");
+          this.realTransition(app, event);
+        }
+      } else {
+        this.realTransition(app, event);
+      }
+    }
+
+    private void realTransition(ApplicationImpl app, ApplicationEvent event) {
       ApplicationInitEvent initEvent = (ApplicationInitEvent)event;
       app.applicationACLs = initEvent.getApplicationACLs();
       app.aclsManager.addApplication(app.getAppId(), app.applicationACLs);

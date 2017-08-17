@@ -19,6 +19,9 @@ public enum InterceptedEventType {
   AllocateContainer,
   HeartbeatWith, //If there are resource request from AM --> RM, Otherwise there are some HB (empty)
 
+  // ApplicationImpl (NM --> AM)
+  NM_INIT_APPLICATION,
+
   //ContainerLauncherImpl (AM --> NM)
   CONTAINER_REMOTE_LAUNCH,
   CONTAINER_REMOTE_CLEANUP
