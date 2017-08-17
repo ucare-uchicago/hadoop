@@ -138,10 +138,10 @@ public class EventInterceptor {
   }
 
   public String createFileName() {
-    long time = System.currentTimeMillis();
-    int count = (int) (time % 10000);
+    long time = System.nanoTime();
+    long postfix = time % 1000000;
     String filename =
-        "hadoop-" + String.valueOf(eventId) + "-" + String.valueOf(count);
+        "hadoop-" + String.valueOf(eventId) + "-" + String.valueOf(postfix);
     return filename;
   }
 
