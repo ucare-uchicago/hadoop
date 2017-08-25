@@ -49,6 +49,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.samc.NodeRole;
+import org.apache.hadoop.yarn.samc.StatusNotifier;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
@@ -684,6 +686,11 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   private static class AppFinishedTransition extends FinalTransition {
     public void transition(RMAppImpl app, RMAppEvent event) {
+      // riza: report FINISHED state here
+      StatusNotifier interceptor =
+          new StatusNotifier(NodeRole.RM, org.apache.hadoop.yarn.samc.NodeState.RM_AM_FINISHED);
+      interceptor.printToLog();
+      interceptor.submit();
       RMAppFinishedAttemptEvent finishedEvent =
           (RMAppFinishedAttemptEvent)event;
       app.diagnostics.append(finishedEvent.getDiagnostics());

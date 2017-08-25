@@ -127,7 +127,7 @@ public class FileSystemRMStateStore extends RMStateStore {
             // application
             // riza: report RECOVERING state here
             StatusNotifier interceptor =
-                new StatusNotifier(NodeRole.RM, NodeState.RM_RECOVERING);
+                new StatusNotifier(NodeRole.RM, NodeState.RM_AM_RECOVERING);
             interceptor.printToLog();
             interceptor.submit();
             LOG.info("Loading application from node: " + childNodeName);
