@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<configuration>
+
+  <property>
+    <name>yarn.nodemanager.aux-services</name>
+    <value>mapreduce_shuffle</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+    <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.hostname</name>
+    <value>pc823.emulab.net</value>
+  </property>
+
+  <!--<property>
+    <name>yarn.resourcemanager.webapp.address</name>
+    <value>pc823.emulab.net:8088</value>
+  </property>-->
+
+  <property>
+    <name>yarn.resourcemanager.bind-host</name>
+    <value>0.0.0.0</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.resource.memory-mb</name>
+    <value>12288</value> <!-- write mode -->
+    <!-- <value>2048</value> experiment mode -->
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.resource.cpu-vcores</name>
+    <value>12</value> <!-- write mode -->
+    <!-- <value>2</value> experiment mode -->
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.log.retain-seconds</name>
+    <value>86400</value>
+  </property>
+
+  <!-- @Cesar: Added by cesar to control location of app master -->
+  <property>
+    <name>yarn.ucare_se.experiment.blAppMaster</name>
+    <value></value>
+  </property>
+
+  <property>
+    <name>yarn.ucare_se.experiment.fixAppMaster</name>
+    <value>false</value>
+  </property>
+  <!-- @Cesar: End cesar custom configuration -->
+
+</configuration>

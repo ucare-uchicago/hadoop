@@ -1,0 +1,12 @@
+#!/bin/bash
+
+. cluster_topology.sh
+
+clstop
+cp $PSBIN/ucare_se_conf/writeconf/* $HADOOP_CONF_DIR/
+sed_replaceconf.sh
+clcleanlogs
+clreset
+clsetup
+ssh -t $HDFS_NN "dfsformat;"
+

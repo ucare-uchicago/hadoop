@@ -1,0 +1,6 @@
+#!/bin/bash
+
+. cluster_topology.sh
+
+ssh -t $YARN_RM \
+    'start-dfs.sh; start-yarn.sh; mr-jobhistory-daemon.sh start historyserver;'

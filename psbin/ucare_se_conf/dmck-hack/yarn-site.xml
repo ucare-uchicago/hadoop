@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<configuration>
+
+  <property>
+    <name>yarn.nodemanager.aux-services</name>
+    <value>mapreduce.shuffle</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+    <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.hostname</name>
+    <value>YARN_RM_HOSTNAME</value>
+  </property>
+
+  <!--<property>
+    <name>yarn.resourcemanager.webapp.address</name>
+    <value>YARN_RM_HOSTNAME:8088</value>
+  </property>-->
+
+  <property>
+    <name>yarn.resourcemanager.bind-host</name>
+    <value>0.0.0.0</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.resource.memory-mb</name>
+    <value>12288</value> <!-- write mode -->
+    <!-- <value>2048</value> experiment mode -->
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.resource.cpu-vcores</name>
+    <value>12</value> <!-- write mode -->
+    <!-- <value>2</value> experiment mode -->
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.log.retain-seconds</name>
+    <value>86400</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.recovery.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.store.class</name>
+    <value>org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.fs.state-store.uri</name>
+    <value>/mnt/extra/yarn-fs-state-store</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.am.max-attempts</name>
+    <value>5</value>
+  </property>
+
+  <!-- HACKS BEGIN -->
+  <property>
+    <name>yarn.resourcemanager.hacks.die-on-am-completion</name>
+    <value>false</value>
+  </property>
+  <!-- HACKS END -->
+
+  <!-- SAMC CONF BEGIN -->
+  <property>
+    <name>yarn.samc.intercept-event</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>yarn.samc.ipc-dir</name>
+    <value>/tmp/ipc</value>
+  </property>
+  <!-- SAMC CONF END -->
+
+</configuration>

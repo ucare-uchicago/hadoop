@@ -1,0 +1,6 @@
+#!/bin/bash
+
+. cluster_topology.sh
+
+ssh -t $YARN_RM \
+    'stop-dfs.sh; stop-yarn.sh; mr-jobhistory-daemon.sh stop historyserver;'

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+. cluster_topology.sh
+
+echo "Initial cluster setup" > /tmp/$USER-clsetup.log
+
+for i in `seq 0 $MAX_NODE`;
+do
+  echo "$HOSTNAME_PREFIX$i" >> /tmp/$USER-clsetup.log
+  ssh -t $HOSTNAME_PREFIX$i \
+   'sudo rm -r /tmp/hadoop-ucare /mnt/extra/dfs-ucare; \
+    sudo mkdir -p /tmp/hadoop-ucare /mnt/extra/dfs-ucare; \
+    sudo chgrp -R ucare /tmp/hadoop-ucare /mnt/extra;
+    sudo chmod -R 774 /tmp/hadoop-ucare /mnt/extra;'  >> /tmp/$USER-clsetup.log
+done
+
+cat /tmp/$USER-clsetup.log
