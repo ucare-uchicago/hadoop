@@ -159,7 +159,7 @@ public abstract class RMCommunicator extends AbstractService
       //huanke
       if (isInterceptEvent) {
         EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
-            NodeRole.RM, NodeState.ALIVE, InterceptedEventType.AMRegister);
+            NodeRole.RM, NodeState.ALIVE, InterceptedEventType.AM_RM_REGISTER);
         interceptor.printToLog();
         interceptor.submitAndWait();
         if (interceptor.hasSAMCResponse()) {
@@ -227,9 +227,8 @@ public abstract class RMCommunicator extends AbstractService
             sb.toString(), historyUrl);
       //huanke
       if (isInterceptEvent) {
-
         EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
-            NodeRole.RM, NodeState.ALIVE, InterceptedEventType.AMUnRegister);
+            NodeRole.RM, NodeState.ALIVE, InterceptedEventType.AM_RM_UNREGISTER);
         interceptor.printToLog();
         interceptor.submitAndWait();
         if (interceptor.hasSAMCResponse()) {

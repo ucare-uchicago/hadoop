@@ -379,7 +379,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         if (isInterceptEvent) {
           EventInterceptor interceptor =
               new EventInterceptor(NodeRole.AM, NodeRole.NM, NodeState.ALIVE,
-                  InterceptedEventType.CONTAINER_REMOTE_LAUNCH);
+                  InterceptedEventType.AM_NM_CONTAINER_REMOTE_LAUNCH);
           interceptor.printToLog();
           interceptor.submitAndWait();
           if (interceptor.hasSAMCResponse()) {
@@ -401,7 +401,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         if (isInterceptEvent) {
           EventInterceptor interceptor =
               new EventInterceptor(NodeRole.AM, NodeRole.NM, NodeState.ALIVE,
-                  InterceptedEventType.CONTAINER_REMOTE_CLEANUP);
+                  InterceptedEventType.AM_NM_CONTAINER_REMOTE_CLEANUP);
           interceptor.printToLog();
           interceptor.submitAndWait();
           if (interceptor.hasSAMCResponse()) {

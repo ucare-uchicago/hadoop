@@ -151,9 +151,6 @@ public abstract class RMContainerRequestor extends RMCommunicator {
           new ArrayList<ContainerId>(release), null);
     AllocateResponse allocateResponse;
     try {
-      //huanke
-//      EventInterceptor interceptor=new EventInterceptor(Role.AM, Role.RM,1, InterceptEventType.AllocateContainer);
-//      interceptor.printString();
       allocateResponse = scheduler.allocate(allocateRequest);
     } catch (YarnException e) {
       throw new IOException(e);

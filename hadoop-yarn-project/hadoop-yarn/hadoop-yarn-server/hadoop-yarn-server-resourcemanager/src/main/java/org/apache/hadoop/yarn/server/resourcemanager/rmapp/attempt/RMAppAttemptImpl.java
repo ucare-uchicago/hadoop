@@ -1061,7 +1061,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 //        //huanke
         if (appAttempt.isInterceptEvent) {
           EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
-              NodeRole.NM, NodeState.ALIVE, InterceptedEventType.AMCleanup);
+              NodeRole.NM, NodeState.ALIVE, InterceptedEventType.RM_NM_AMCLEANUP);
           interceptor.printToLog();
           interceptor.submitAndWait();
           if (interceptor.hasSAMCResponse()) {
@@ -1268,7 +1268,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     // huanke
     if (this.isInterceptEvent) {
       EventInterceptor interceptor = new EventInterceptor(NodeRole.RM, NodeRole.NM,
-          NodeState.ALIVE, InterceptedEventType.AMLauncheee);
+          NodeState.ALIVE, InterceptedEventType.RM_NM_AMLAUNCH);
       interceptor.printToLog();
       interceptor.submitAndWait();
       if (interceptor.hasSAMCResponse()) {

@@ -245,7 +245,7 @@ public abstract class RMStateStore {
     //huanke
     if (isInterceptEvent) {
       EventInterceptor interceptor = new EventInterceptor(
-          NodeRole.RM, NodeRole.RM, NodeState.ALIVE, InterceptedEventType.Store_StateStore);
+          NodeRole.RM, NodeRole.RM, NodeState.ALIVE, InterceptedEventType.RM_STATESTORE_ADD);
       interceptor.printToLog();
       interceptor.submitAndWait();
       if (interceptor.hasSAMCResponse()) {
@@ -392,7 +392,7 @@ public abstract class RMStateStore {
     if (isInterceptEvent) {
 
       EventInterceptor interceptor = new EventInterceptor(
-          NodeRole.RM, NodeRole.RM, NodeState.ALIVE, InterceptedEventType.Remove_StateStore);
+          NodeRole.RM, NodeRole.RM, NodeState.ALIVE, InterceptedEventType.RM_STATESTORE_REMOVE);
       interceptor.printToLog();
       interceptor.submitAndWait();
       if (interceptor.hasSAMCResponse()) {

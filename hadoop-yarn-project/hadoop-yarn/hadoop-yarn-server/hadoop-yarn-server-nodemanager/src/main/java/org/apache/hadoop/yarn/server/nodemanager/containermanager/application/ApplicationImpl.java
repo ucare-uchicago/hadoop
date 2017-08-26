@@ -220,22 +220,9 @@ public class ApplicationImpl implements Application {
   @SuppressWarnings("unchecked")
   static class AppInitTransition implements
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
-    // riza: intercept AM init here
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
-      if (app.isInterceptEvent) {
-        EventInterceptor interceptor =
-            new EventInterceptor(NodeRole.NM, NodeRole.AM, NodeState.ALIVE,
-                InterceptedEventType.NM_INIT_APPLICATION);
-        interceptor.printToLog();
-        interceptor.submitAndWait();
-        if (interceptor.hasSAMCResponse()) {
-          LOG.info("samc: SAMC response to NM to enable AM init");
-          this.realTransition(app, event);
-        }
-      } else {
-        this.realTransition(app, event);
-      }
+      this.realTransition(app, event);
     }
 
     private void realTransition(ApplicationImpl app, ApplicationEvent event) {
@@ -328,6 +315,18 @@ public class ApplicationImpl implements Application {
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
+      // riza: report NM_AM_INIT_DONE in here
+      if (app.isInterceptEvent) {
+        EventInterceptor interceptor = new EventInterceptor(NodeRole.NM,
+            NodeRole.AM, NodeState.ALIVE, InterceptedEventType.NM_AM_INIT_DONE);
+        interceptor.printToLog();
+        interceptor.submitAndWait();
+        if (interceptor.hasSAMCResponse()) {
+          LOG.info("samc: SAMC response to NM to enable AM init");
+          // continue
+        }
+      }
+
       // Start all the containers waiting for ApplicationInit
       for (Container container : app.containers.values()) {
         app.dispatcher.getEventHandler().handle(new ContainerInitEvent(

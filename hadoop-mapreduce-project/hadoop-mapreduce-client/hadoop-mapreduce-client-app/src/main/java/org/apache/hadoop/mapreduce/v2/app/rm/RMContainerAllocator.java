@@ -226,23 +226,23 @@ public class RMContainerAllocator extends RMContainerRequestor
   @Override
   protected synchronized void heartbeat() throws Exception {
     scheduleStats.updateAndLogIfChanged("Before Scheduling: ");
-    List<Container> allocatedContainers = getResources(); //it will tirgger RMContainerRequestor to ask for containers from RM
-    if (allocatedContainers.size() > 0) {
-      // huanke
-      if (isInterceptEvent) {
-        EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
-            NodeRole.RM, org.apache.hadoop.yarn.samc.NodeState.ALIVE,
-            InterceptedEventType.HeartbeatWith);
-        interceptor.printToLog();
-        interceptor.submitAndWait();
-        if (interceptor.hasSAMCResponse()) {
-          LOG.info(
-              "@HK -> SAMC response to RMCommunicator to enable HeartbeatWith");
-          scheduledRequests.assign(allocatedContainers);
-        }
-      } else {
-        scheduledRequests.assign(allocatedContainers);
+    
+    if (isInterceptEvent) {
+      EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
+          NodeRole.RM, org.apache.hadoop.yarn.samc.NodeState.ALIVE,
+          InterceptedEventType.AM_RM_HEARTBEAT);
+      interceptor.printToLog();
+      interceptor.submitAndWait();
+      if (interceptor.hasSAMCResponse()) {
+        LOG.info("samc: sending heartbeat and container request...");
+        // continue
       }
+    }
+    
+    List<Container> allocatedContainers = getResources(); //it will tirgger RMContainerRequestor to ask for containers from RM
+
+    if (allocatedContainers.size() > 0) {
+      scheduledRequests.assign(allocatedContainers);
     }
 
     int completedMaps = getJob().getCompletedMaps();
