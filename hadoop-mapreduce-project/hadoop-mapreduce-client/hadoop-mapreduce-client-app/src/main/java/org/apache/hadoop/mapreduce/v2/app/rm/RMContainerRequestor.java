@@ -42,10 +42,14 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.samc.EventInterceptor;
+import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.NodeRole;
 
 
 /**
@@ -86,6 +90,9 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   private final Map<String, Integer> nodeFailures = new HashMap<String, Integer>();
   private final Set<String> blacklistedNodes = Collections
       .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+
+  // riza: samc
+  private boolean isInterceptEvent = false;
 
   public RMContainerRequestor(ClientService clientService, AppContext context) {
     super(clientService, context);
@@ -142,6 +149,9 @@ public abstract class RMContainerRequestor extends RMCommunicator {
           + ". Should be an integer between 0 and 100 or -1 to disabled");
     }
     LOG.info("blacklistDisablePercent is " + blacklistDisablePercent);
+
+    isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+        YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
   }
 
   protected AllocateResponse makeRemoteRequest() throws IOException {
@@ -151,6 +161,19 @@ public abstract class RMContainerRequestor extends RMCommunicator {
           new ArrayList<ContainerId>(release), null);
     AllocateResponse allocateResponse;
     try {
+
+      if (isInterceptEvent) {
+        EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
+            NodeRole.RM, org.apache.hadoop.yarn.samc.NodeState.ALIVE,
+            InterceptedEventType.AM_RM_HEARTBEAT);
+        interceptor.printToLog();
+        interceptor.submitAndWait();
+        if (interceptor.hasSAMCResponse()) {
+          LOG.info("samc: sending heartbeat and container request...");
+          // continue
+        }
+      }
+
       allocateResponse = scheduler.allocate(allocateRequest);
     } catch (YarnException e) {
       throw new IOException(e);
