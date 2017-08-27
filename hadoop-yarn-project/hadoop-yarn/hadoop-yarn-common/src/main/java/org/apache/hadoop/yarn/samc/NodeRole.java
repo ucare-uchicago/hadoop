@@ -6,7 +6,7 @@ package org.apache.hadoop.yarn.samc;
  *
  */
 public enum NodeRole {
-  RM,
+  AM,
   NM,
-  AM
+  RM
 }
