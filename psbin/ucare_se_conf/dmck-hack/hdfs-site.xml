@@ -20,17 +20,22 @@
 
   <property>
     <name>dfs.name.dir</name>
-    <value>/tmp/hadoop-ucare/name</value>
-  </property>
-
-  <property>
-    <name>dfs.namenode.dir</name>
-    <value>/mnt/extra/dfs-ucare/namenode</value>
+    <value>file:///mnt/extra/dfs-ucare/name</value>
   </property>
 
   <property>
     <name>dfs.datanode.data.dir</name>
     <value>file:///mnt/extra/dfs-ucare/data</value>
+  </property>
+
+  <property>
+    <name>dfs.namenode.dir</name>
+    <value>file:///mnt/extra/dfs-ucare/namenode</value>
+  </property>
+
+  <property>
+    <name>dfs.namenode.checkpoint.dir</name>
+    <value>file:///mnt/extra/dfs-ucare/namesecondary</value>
   </property>
 
   <property>

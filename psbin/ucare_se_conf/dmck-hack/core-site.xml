@@ -25,7 +25,7 @@
 
 <property>
   <name>hadoop.tmp.dir</name>
-  <value>/mnt/extra/dfs-ucare</value>
+  <value>/tmp/hadoop-ucare</value>
 </property>
 
 <property>

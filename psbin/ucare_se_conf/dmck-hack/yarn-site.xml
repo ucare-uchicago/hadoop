@@ -54,11 +54,6 @@
   </property>
 
   <property>
-    <name>yarn.resourcemanager.fs.state-store.uri</name>
-    <value>/mnt/extra/yarn-fs-state-store</value>
-  </property>
-
-  <property>
     <name>yarn.resourcemanager.am.max-attempts</name>
     <value>5</value>
   </property>
