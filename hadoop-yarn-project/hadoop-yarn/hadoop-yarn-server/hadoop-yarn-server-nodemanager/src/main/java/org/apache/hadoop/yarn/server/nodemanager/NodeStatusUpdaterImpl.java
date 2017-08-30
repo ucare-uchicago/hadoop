@@ -48,6 +48,10 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.samc.EventInterceptor;
+import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.NodeRole;
+import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.ServerRMProxy;
@@ -101,6 +105,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private Thread  statusUpdater;
   private long rmIdentifier = ResourceManagerConstants.RM_INVALID_IDENTIFIER;
 
+  // riza: samc vars
+  private int lastContainerCount = 0;
+  private boolean containerCountChanged = false;
+  private boolean isInterceptEvent = false;
+
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
       NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
     super(NodeStatusUpdaterImpl.class.getName());
@@ -133,7 +142,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.tokenRemovalDelayMs =
         conf.getInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
             YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS);
-    
+    this.isInterceptEvent =
+        conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+            YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
+
     LOG.info("Initialized nodemanager for " + nodeId + ":" +
         " physical-memory=" + memoryMb + " virtual-memory=" + virtualMemoryMb +
         " virtual-cores=" + virtualCores);
@@ -277,6 +289,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     NodeStatus nodeStatus = recordFactory.newRecordInstance(NodeStatus.class);
     nodeStatus.setNodeId(this.nodeId);
 
+    int numRunningContainer = 0;
     int numActiveContainers = 0;
     List<ContainerStatus> containersStatuses = new ArrayList<ContainerStatus>();
     for (Iterator<Entry<ContainerId, Container>> i =
@@ -290,6 +303,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           container.cloneAndGetContainerStatus();
       containersStatuses.add(containerStatus);
       ++numActiveContainers;
+      ++numRunningContainer;
       LOG.info("Sending out status for container: " + containerStatus);
 
       if (containerStatus.getState() == ContainerState.COMPLETE) {
@@ -297,8 +311,18 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         i.remove();
 
         LOG.info("Removed completed container " + containerId);
+        --numRunningContainer;
       }
     }
+
+    // riza: model NM heartbeat if there is a change in numRunningContainer
+    if (numRunningContainer != lastContainerCount) {
+      lastContainerCount = numRunningContainer;
+      containerCountChanged = true;
+    } else {
+      containerCountChanged = false;
+    }
+
     nodeStatus.setContainersStatuses(containersStatuses);
 
     LOG.debug(this.nodeId + " sending out status for "
@@ -373,15 +397,14 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             request
               .setLastKnownNMTokenMasterKey(NodeStatusUpdaterImpl.this.context
                 .getNMTokenSecretManager().getCurrentKey());
-//
-//            EventInterceptor interceptor=new EventInterceptor(Role.NM, Role.RM,1,InterceptEventType.NodeStatusUpdate);
-//            interceptor.printString();
-//            if(interceptor.getSAMCResponse()){
-//              LOG.info("@HK I am in NodeStatusUpdaterImpl  1 ");
-//            }else{
-//              LOG.info("@HK I am in NodeStatusUpdaterImpl  2");
-//            }
 
+            if (isInterceptEvent && containerCountChanged) {
+              EventInterceptor interceptor =
+                  new EventInterceptor(NodeRole.NM, NodeRole.RM,
+                      NodeState.ALIVE, InterceptedEventType.NM_RM_HEARTBEAT);
+              interceptor.printToLog();
+              interceptor.submitAndWait();
+            }
 
             response = resourceTracker.nodeHeartbeat(request);
             //get next heartbeat interval from response

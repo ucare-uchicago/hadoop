@@ -22,7 +22,10 @@ public enum InterceptedEventType {
   // ApplicationImpl (NM --> AM)
   NM_AM_INIT_DONE,
 
-  //ContainerLauncherImpl (AM --> NM)
+  // ContainerLauncherImpl (AM --> NM)
   AM_NM_CONTAINER_REMOTE_LAUNCH,
-  AM_NM_CONTAINER_REMOTE_CLEANUP
+  AM_NM_CONTAINER_REMOTE_CLEANUP,
+
+  // NM heartbeat to RM
+  NM_RM_HEARTBEAT
 }
