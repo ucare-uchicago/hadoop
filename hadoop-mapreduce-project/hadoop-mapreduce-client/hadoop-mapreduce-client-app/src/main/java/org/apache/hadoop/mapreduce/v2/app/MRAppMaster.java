@@ -127,6 +127,10 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.samc.EventInterceptor;
+import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.NodeRole;
+import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.util.Clock;
@@ -204,6 +208,9 @@ public class MRAppMaster extends CompositeService {
   JobStateInternal forcedState = null;
 
   private long recoveredJobStartTime = 0;
+
+  // riza: samc
+  private boolean isInterceptEvent = false;
 
   public MRAppMaster(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
@@ -1328,6 +1335,23 @@ public class MRAppMaster extends CompositeService {
       conf.setBoolean("fs.automatic.close", false);
       // set job classloader if configured
       MRApps.setJobClassLoader(conf);
+
+      boolean isInterceptEvent =
+          conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+              YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
+
+      // riza: mock message NM_AM_INIT_DONE to mark AM launched
+      if (isInterceptEvent) {
+        EventInterceptor interceptor = new EventInterceptor(NodeRole.NM,
+            NodeRole.AM, NodeState.ALIVE, InterceptedEventType.NM_AM_INIT_DONE);
+        interceptor.printToLog();
+        interceptor.submitAndWait();
+        if (interceptor.hasSAMCResponse()) {
+          LOG.info("samc: AM is kicking in!");
+          // continue
+        }
+      }
+
       initAndStartAppMaster(appMaster, conf, jobUserName);
       LOG.info("@huanke step2 initAndStartAppMaster()");
     } catch (Throwable t) {

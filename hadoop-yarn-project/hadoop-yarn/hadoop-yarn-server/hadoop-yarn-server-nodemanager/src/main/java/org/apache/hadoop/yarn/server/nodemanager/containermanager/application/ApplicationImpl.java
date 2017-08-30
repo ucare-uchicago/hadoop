@@ -97,8 +97,8 @@ public class ApplicationImpl implements Application {
     stateMachine = stateMachineFactory.make(this);
 
     Configuration conf = new YarnConfiguration();
-    isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
-        YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
+    //isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+    //    YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
   }
 
   @Override
@@ -316,16 +316,16 @@ public class ApplicationImpl implements Application {
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
       // riza: report NM_AM_INIT_DONE in here
-      if (app.isInterceptEvent) {
-        EventInterceptor interceptor = new EventInterceptor(NodeRole.NM,
-            NodeRole.AM, NodeState.ALIVE, InterceptedEventType.NM_AM_INIT_DONE);
-        interceptor.printToLog();
-        interceptor.submitAndWait();
-        if (interceptor.hasSAMCResponse()) {
-          LOG.info("samc: SAMC response to NM to enable AM init");
-          // continue
-        }
-      }
+//      if (app.isInterceptEvent) {
+//        EventInterceptor interceptor = new EventInterceptor(NodeRole.NM,
+//            NodeRole.AM, NodeState.ALIVE, InterceptedEventType.NM_AM_INIT_DONE);
+//        interceptor.printToLog();
+//        interceptor.submitAndWait();
+//        if (interceptor.hasSAMCResponse()) {
+//          LOG.info("samc: SAMC response to NM to enable AM init");
+//          // continue
+//        }
+//      }
 
       // Start all the containers waiting for ApplicationInit
       for (Container container : app.containers.values()) {
