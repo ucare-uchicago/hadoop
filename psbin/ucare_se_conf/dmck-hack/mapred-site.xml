@@ -186,4 +186,10 @@
   </property>
   <!-- @huanke: custom end -->
 
+  <property>
+    <name>yarn.app.mapreduce.am.job.recovery.enable</name>
+    <value>true</value>
+    <description>Enable job recovery</description>
+  </property>
+
 </configuration>
