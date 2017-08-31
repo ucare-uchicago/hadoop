@@ -131,6 +131,7 @@ public class EventInterceptor {
       LOG.error("samc: Got error when reading ack file " + ackFile.toString(),
           e);
     }
+    LOG.info("samc: control returned to SUT...");
   }
 
   public String getFileDir() {

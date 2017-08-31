@@ -69,6 +69,8 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.samc.EventInterceptor;
+import org.apache.hadoop.yarn.samc.InterceptedEventType;
 import org.apache.hadoop.yarn.samc.NodeRole;
 import org.apache.hadoop.yarn.samc.VerificationNotifier;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -106,6 +108,9 @@ public class ApplicationMasterService extends AbstractService implements
 
   private boolean dieOnAmCompletion = false;
 
+  // riza: samc
+  private boolean isInterceptEvent = false;
+
   public ApplicationMasterService(RMContext rmContext, YarnScheduler scheduler) {
     super(ApplicationMasterService.class.getName());
     this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
@@ -139,6 +144,9 @@ public class ApplicationMasterService extends AbstractService implements
           serverConf, this.rmContext.getAMRMTokenSecretManager(),
           serverConf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT, 
               YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
+
+    isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+        YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
     
     // Enable service authorization?
     if (conf.getBoolean(
@@ -479,6 +487,16 @@ public class ApplicationMasterService extends AbstractService implements
             + appAttemptId;
         LOG.error(message);
         return resync;
+      }
+
+      if (isInterceptEvent && (allocateResponse.getAllocatedContainers()
+          .size() > 0
+          || allocateResponse.getCompletedContainersStatuses().size() > 0)) {
+        EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
+            NodeRole.AM, org.apache.hadoop.yarn.samc.NodeState.ALIVE,
+            InterceptedEventType.RM_AM_RESPOND_HB);
+        interceptor.printToLog();
+        interceptor.submitAndWait();
       }
 
       return allocateResponse;
