@@ -489,9 +489,8 @@ public class ApplicationMasterService extends AbstractService implements
         return resync;
       }
 
-      if (isInterceptEvent && (allocateResponse.getAllocatedContainers()
-          .size() > 0
-          || allocateResponse.getCompletedContainersStatuses().size() > 0)) {
+      if (isInterceptEvent && allocateResponse.getAllocatedContainers()
+          .size() > 0) {
         EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
             NodeRole.AM, org.apache.hadoop.yarn.samc.NodeState.ALIVE,
             InterceptedEventType.RM_AM_RESPOND_HB);

@@ -162,7 +162,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     AllocateResponse allocateResponse;
     try {
 
-      if (isInterceptEvent && (ask.size() > 0 || release.size() > 0)) {
+      if (isInterceptEvent && ask.size() > 0) {
         EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
             NodeRole.RM, org.apache.hadoop.yarn.samc.NodeState.ALIVE,
             InterceptedEventType.AM_RM_HEARTBEAT);
@@ -180,7 +180,9 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     lastClusterNmCount = clusterNmCount;
     clusterNmCount = allocateResponse.getNumClusterNodes();
 
-    if (ask.size() > 0 || release.size() > 0) {
+    if (ask.size() > 0 || release.size() > 0
+        || allocateResponse.getAllocatedContainers().size() > 0
+        || allocateResponse.getCompletedContainersStatuses().size() > 0) {
       LOG.info("getResources() for " + applicationId + ":" + " ask="
           + ask.size() + " release= " + release.size() + " newContainers="
           + allocateResponse.getAllocatedContainers().size()
