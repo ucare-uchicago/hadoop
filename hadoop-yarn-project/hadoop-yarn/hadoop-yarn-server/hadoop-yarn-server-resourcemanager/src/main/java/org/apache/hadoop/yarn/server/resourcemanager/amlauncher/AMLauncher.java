@@ -50,9 +50,14 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.samc.EventInterceptor;
+import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.NodeRole;
+import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -79,6 +84,9 @@ public class AMLauncher implements Runnable {
   
   @SuppressWarnings("rawtypes")
   private final EventHandler handler;
+
+  // riza: samc
+  private boolean isInterceptEvent = false;
   
   public AMLauncher(RMContext rmContext, RMAppAttempt application,
       AMLauncherEventType eventType, Configuration conf) {
@@ -88,6 +96,10 @@ public class AMLauncher implements Runnable {
     this.rmContext = rmContext;
     this.handler = rmContext.getDispatcher().getEventHandler();
     this.masterContainer = application.getMasterContainer();
+
+    this.isInterceptEvent =
+        conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+            YarnConfiguration.DEFAULT_SAMC_INTERCEPT_BUG);
   }
   
   private void connect() throws IOException {
@@ -114,9 +126,24 @@ public class AMLauncher implements Runnable {
     StartContainersRequest allRequests =
         StartContainersRequest.newInstance(list);
 
+    if (isInterceptEvent) {
+      EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
+          NodeRole.NM, NodeState.ALIVE, InterceptedEventType.RM_NM_AMLAUNCH);
+      interceptor.printToLog();
+      interceptor.submitAndWait();
+    }
 
     StartContainersResponse response =
         containerMgrProxy.startContainers(allRequests);
+
+    if (isInterceptEvent) {
+      EventInterceptor interceptor =
+          new EventInterceptor(NodeRole.NM, NodeRole.RM, NodeState.ALIVE,
+              InterceptedEventType.NM_RESPOND_CONTAINERS_START);
+      interceptor.printToLog();
+      interceptor.submitAndWait();
+    }
+
     if (response.getFailedRequests() != null
         && response.getFailedRequests().containsKey(masterContainerID)) {
       Throwable t =
@@ -135,8 +162,25 @@ public class AMLauncher implements Runnable {
     containerIds.add(containerId);
     StopContainersRequest stopRequest =
         StopContainersRequest.newInstance(containerIds);
+
+    if (isInterceptEvent) {
+      EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
+          NodeRole.NM, NodeState.ALIVE, InterceptedEventType.RM_NM_AMCLEANUP);
+      interceptor.printToLog();
+      interceptor.submitAndWait();
+    }
+
     StopContainersResponse response =
         containerMgrProxy.stopContainers(stopRequest);
+
+    if (isInterceptEvent) {
+      EventInterceptor interceptor =
+          new EventInterceptor(NodeRole.NM, NodeRole.RM, NodeState.ALIVE,
+              InterceptedEventType.NM_RESPOND_CONTAINERS_STOP);
+      interceptor.printToLog();
+      interceptor.submitAndWait();
+    }
+
     if (response.getFailedRequests() != null
         && response.getFailedRequests().containsKey(containerId)) {
       Throwable t = response.getFailedRequests().get(containerId).deSerialize();

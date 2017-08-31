@@ -28,5 +28,9 @@ public enum InterceptedEventType {
   AM_NM_MASTER_TERMINATE,
 
   // NM heartbeat to RM
-  NM_RM_HEARTBEAT
+  NM_RM_HEARTBEAT,
+
+  // NM to both AM/RM
+  NM_RESPOND_CONTAINERS_START,
+  NM_RESPOND_CONTAINERS_STOP
 }

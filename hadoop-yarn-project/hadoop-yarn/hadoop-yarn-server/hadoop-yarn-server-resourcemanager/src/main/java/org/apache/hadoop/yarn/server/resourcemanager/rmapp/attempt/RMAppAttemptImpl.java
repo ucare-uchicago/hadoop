@@ -390,9 +390,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.stateMachine = stateMachineFactory.make(this);
     this.user = user;
 
-    this.isInterceptEvent =
-        conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
-            YarnConfiguration.DEFAULT_SAMC_INTERCEPT_BUG);
+//    this.isInterceptEvent =
+//        conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+//            YarnConfiguration.DEFAULT_SAMC_INTERCEPT_BUG);
   }
 
   @Override
@@ -1264,24 +1264,17 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private void launchAttempt() {
     // Send event to launch the AM Container
     // huanke
-    if (this.isInterceptEvent) {
-      EventInterceptor interceptor = new EventInterceptor(NodeRole.RM, NodeRole.NM,
-          NodeState.ALIVE, InterceptedEventType.RM_NM_AMLAUNCH);
-      interceptor.printToLog();
-      interceptor.submitAndWait();
-      if (interceptor.hasSAMCResponse()) {
-        LOG.info(
-            "@HK -> SAMC response to RMCommunicator to enable AMLauncheee");
-        eventHandler
-            .handle(new AMLauncherEvent(AMLauncherEventType.LAUNCH, this));
-      } else {
-        LOG.info(
-            "@HK -> SAMC response to RMCommunicator to disable AMLauncheee");
-      }
-    } else {
-      eventHandler
-          .handle(new AMLauncherEvent(AMLauncherEventType.LAUNCH, this));
-    }
+//    if (this.isInterceptEvent) {
+//      EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
+//          NodeRole.NM, NodeState.ALIVE, InterceptedEventType.RM_NM_AMLAUNCH);
+//      interceptor.printToLog();
+//      interceptor.submitAndWait();
+//      if (interceptor.hasSAMCResponse()) {
+//        LOG.info(
+//            "@HK -> SAMC response to RMCommunicator to enable AMLauncheee");
+//      }
+//    }
+    eventHandler.handle(new AMLauncherEvent(AMLauncherEventType.LAUNCH, this));
   }
   
   private void attemptLaunched() {

@@ -156,8 +156,28 @@ public class ContainerLauncherImpl extends AbstractService implements
         List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
         list.add(startRequest);
         StartContainersRequest requestList = StartContainersRequest.newInstance(list);
+
+        // riza
+        if (isInterceptEvent) {
+          EventInterceptor interceptor =
+              new EventInterceptor(NodeRole.AM, NodeRole.NM, NodeState.ALIVE,
+                  InterceptedEventType.AM_NM_CONTAINER_REMOTE_LAUNCH);
+          interceptor.printToLog();
+          interceptor.submitAndWait();
+        }
+
         StartContainersResponse response =
             proxy.getContainerManagementProtocol().startContainers(requestList);
+
+        // riza
+        if (isInterceptEvent) {
+          EventInterceptor interceptor =
+              new EventInterceptor(NodeRole.NM, NodeRole.AM, NodeState.ALIVE,
+                  InterceptedEventType.NM_RESPOND_CONTAINERS_START);
+          interceptor.printToLog();
+          interceptor.submitAndWait();
+        }
+
         if (response.getFailedRequests() != null
             && response.getFailedRequests().containsKey(containerID)) {
           throw response.getFailedRequests().get(containerID).deSerialize();
@@ -211,8 +231,28 @@ public class ContainerLauncherImpl extends AbstractService implements
           List<ContainerId> ids = new ArrayList<ContainerId>();
           ids.add(this.containerID);
           StopContainersRequest request = StopContainersRequest.newInstance(ids);
+
+          // riza
+          if (isInterceptEvent) {
+            EventInterceptor interceptor =
+                new EventInterceptor(NodeRole.AM, NodeRole.NM, NodeState.ALIVE,
+                    InterceptedEventType.AM_NM_CONTAINER_REMOTE_CLEANUP);
+            interceptor.printToLog();
+            interceptor.submitAndWait();
+          }
+
           StopContainersResponse response =
               proxy.getContainerManagementProtocol().stopContainers(request);
+
+          // riza
+          if (isInterceptEvent) {
+            EventInterceptor interceptor =
+                new EventInterceptor(NodeRole.NM, NodeRole.AM, NodeState.ALIVE,
+                    InterceptedEventType.NM_RESPOND_CONTAINERS_STOP);
+            interceptor.printToLog();
+            interceptor.submitAndWait();
+          }
+
           if (response.getFailedRequests() != null
               && response.getFailedRequests().containsKey(this.containerID)) {
             throw response.getFailedRequests().get(this.containerID)
@@ -375,43 +415,13 @@ public class ContainerLauncherImpl extends AbstractService implements
       switch(event.getType()) {
 
       case CONTAINER_REMOTE_LAUNCH:
-        //huanke
-        if (isInterceptEvent) {
-          EventInterceptor interceptor =
-              new EventInterceptor(NodeRole.AM, NodeRole.NM, NodeState.ALIVE,
-                  InterceptedEventType.AM_NM_CONTAINER_REMOTE_LAUNCH);
-          interceptor.printToLog();
-          interceptor.submitAndWait();
-          if (interceptor.hasSAMCResponse()) {
-            LOG.info(
-                "@HK -> SAMC response to RMCommunicator to enable CONTAINER_REMOTE_LAUNCH");
-            ContainerRemoteLaunchEvent launchEvent =
-                (ContainerRemoteLaunchEvent) event;
-            c.launch(launchEvent);
-          }
-        } else {
-          ContainerRemoteLaunchEvent launchEvent =
-              (ContainerRemoteLaunchEvent) event;
-          c.launch(launchEvent);
-        }
+        ContainerRemoteLaunchEvent launchEvent =
+            (ContainerRemoteLaunchEvent) event;
+        c.launch(launchEvent);
         break;
 
       case CONTAINER_REMOTE_CLEANUP:
-        //huanke
-        if (isInterceptEvent) {
-          EventInterceptor interceptor =
-              new EventInterceptor(NodeRole.AM, NodeRole.NM, NodeState.ALIVE,
-                  InterceptedEventType.AM_NM_CONTAINER_REMOTE_CLEANUP);
-          interceptor.printToLog();
-          interceptor.submitAndWait();
-          if (interceptor.hasSAMCResponse()) {
-            LOG.info(
-                "@HK -> SAMC response to RMCommunicator to enable CONTAINER_REMOTE_CLEANUP");
-            c.kill();
-          }
-        } else {
-          c.kill();
-        }
+        c.kill();
         break;
       }
       removeContainerIfDone(containerID);
