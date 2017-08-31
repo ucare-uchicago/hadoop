@@ -69,6 +69,8 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.samc.NodeRole;
+import org.apache.hadoop.yarn.samc.VerificationNotifier;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -301,6 +303,11 @@ public class ApplicationMasterService extends AbstractService implements
 
     // Allow only one thread in AM to do finishApp at a time.
     synchronized (lastResponse) {
+      // riza: notify DMCK for verification later
+      VerificationNotifier notifier = new VerificationNotifier(NodeRole.RM,
+          "receiveUnregister", String.valueOf(System.currentTimeMillis()));
+      notifier.printToLog();
+      notifier.submit();
 
       this.amLivelinessMonitor.receivedPing(applicationAttemptId);
 

@@ -142,9 +142,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.tokenRemovalDelayMs =
         conf.getInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
             YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS);
-    this.isInterceptEvent =
-        conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
-            YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
+    // this.isInterceptEvent =
+    //     conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+    //         YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
 
     LOG.info("Initialized nodemanager for " + nodeId + ":" +
         " physical-memory=" + memoryMb + " virtual-memory=" + virtualMemoryMb +

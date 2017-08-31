@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.Appli
 import org.apache.hadoop.yarn.samc.NodeRole;
 import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.samc.StatusNotifier;
+import org.apache.hadoop.yarn.samc.VerificationNotifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
@@ -130,6 +131,11 @@ public class FileSystemRMStateStore extends RMStateStore {
                 new StatusNotifier(NodeRole.RM, NodeState.RM_AM_RECOVERING);
             interceptor.printToLog();
             interceptor.submit();
+            // riza: notify DMCK for verification later
+            VerificationNotifier notifier = new VerificationNotifier(NodeRole.RM,
+                "doRecovery", String.valueOf(System.currentTimeMillis()));
+            notifier.printToLog();
+            notifier.submit();
             LOG.info("Loading application from node: " + childNodeName);
             ApplicationId appId = ConverterUtils.toApplicationId(childNodeName);
             ApplicationStateDataPBImpl appStateData =

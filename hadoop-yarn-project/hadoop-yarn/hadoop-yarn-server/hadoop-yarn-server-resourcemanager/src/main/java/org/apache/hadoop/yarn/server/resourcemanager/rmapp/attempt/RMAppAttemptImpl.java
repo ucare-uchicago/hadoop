@@ -1059,20 +1059,17 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       if(!appAttempt.submissionContext.getUnmanagedAM()) {
         LOG.info("@huanke Tell the launcher to cleanup");
 //        //huanke
-        if (appAttempt.isInterceptEvent) {
-          EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
-              NodeRole.NM, NodeState.ALIVE, InterceptedEventType.RM_NM_AMCLEANUP);
-          interceptor.printToLog();
-          interceptor.submitAndWait();
-          if (interceptor.hasSAMCResponse()) {
-            LOG.info("@HK -> SAMC response to RMCommunicator to enbale AMCleanup");
-            appAttempt.eventHandler.handle(new AMLauncherEvent(
-                    AMLauncherEventType.CLEANUP, appAttempt));
-          }
-        } else {
-          appAttempt.eventHandler.handle(new AMLauncherEvent(AMLauncherEventType.CLEANUP, appAttempt));
-        }
-      }
+//        if (appAttempt.isInterceptEvent) {
+//          EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
+//              NodeRole.NM, NodeState.ALIVE, InterceptedEventType.RM_NM_AMCLEANUP);
+//          interceptor.printToLog();
+//          interceptor.submitAndWait();
+//          if (interceptor.hasSAMCResponse()) {
+//            LOG.info("@HK -> SAMC response to RMCommunicator to enbale AMCleanup");
+//          }
+//        }
+
+        appAttempt.eventHandler.handle(new AMLauncherEvent(AMLauncherEventType.CLEANUP, appAttempt));
     }
   }
 
