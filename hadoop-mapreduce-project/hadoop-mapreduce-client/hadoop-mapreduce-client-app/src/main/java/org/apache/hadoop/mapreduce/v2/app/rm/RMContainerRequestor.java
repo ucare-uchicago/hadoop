@@ -168,13 +168,17 @@ public abstract class RMContainerRequestor extends RMCommunicator {
             InterceptedEventType.AM_RM_HEARTBEAT);
         interceptor.printToLog();
         interceptor.submitAndWait();
-        if (interceptor.hasSAMCResponse()) {
-          LOG.info("samc: sending heartbeat and container request...");
-          // continue
-        }
       }
 
       allocateResponse = scheduler.allocate(allocateRequest);
+
+      if (isInterceptEvent && (ask.size() > 0 || release.size() > 0)) {
+        EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
+            NodeRole.AM, org.apache.hadoop.yarn.samc.NodeState.ALIVE,
+            InterceptedEventType.RM_AM_RESPOND_HB);
+        interceptor.printToLog();
+        interceptor.submitAndWait();
+      }
     } catch (YarnException e) {
       throw new IOException(e);
     }

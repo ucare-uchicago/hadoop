@@ -156,37 +156,35 @@ public abstract class RMCommunicator extends AbstractService
         request.setRpcPort(serviceAddr.getPort());
         request.setTrackingUrl(serviceAddr.getHostName() + ":" + clientService.getHttpPort());
       }
-      //huanke
+
+      // riza
       if (isInterceptEvent) {
         EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
             NodeRole.RM, NodeState.ALIVE, InterceptedEventType.AM_RM_REGISTER);
         interceptor.printToLog();
         interceptor.submitAndWait();
-        if (interceptor.hasSAMCResponse()) {
-          LOG.info(
-              "@HK -> SAMC response to RMCommunicator to enable RegisterApplicationMaster");
-          RegisterApplicationMasterResponse response =
-              scheduler.registerApplicationMaster(request);
-          maxContainerCapability = response.getMaximumResourceCapability();
-          this.context.getClusterInfo()
-              .setMaxContainerCapability(maxContainerCapability);
-          if (UserGroupInformation.isSecurityEnabled()) {
-            setClientToAMToken(response.getClientToAMTokenMasterKey());
-          }
-          this.applicationACLs = response.getApplicationACLs();
-        }
-      } else {
-        LOG.info("@HK -> RMCommunicator without interceptHadoop");
-        RegisterApplicationMasterResponse response =
-            scheduler.registerApplicationMaster(request);
-        maxContainerCapability = response.getMaximumResourceCapability();
-        this.context.getClusterInfo()
-            .setMaxContainerCapability(maxContainerCapability);
-        if (UserGroupInformation.isSecurityEnabled()) {
-          setClientToAMToken(response.getClientToAMTokenMasterKey());
-        }
-        this.applicationACLs = response.getApplicationACLs();
       }
+
+      RegisterApplicationMasterResponse response =
+          scheduler.registerApplicationMaster(request);
+
+      // riza
+      if (isInterceptEvent) {
+        EventInterceptor interceptor =
+            new EventInterceptor(NodeRole.RM, NodeRole.AM, NodeState.ALIVE,
+                InterceptedEventType.RM_AM_RESPOND_REGISTER);
+        interceptor.printToLog();
+        interceptor.submitAndWait();
+      }
+
+      maxContainerCapability = response.getMaximumResourceCapability();
+      this.context.getClusterInfo()
+          .setMaxContainerCapability(maxContainerCapability);
+      if (UserGroupInformation.isSecurityEnabled()) {
+        setClientToAMToken(response.getClientToAMTokenMasterKey());
+      }
+      this.applicationACLs = response.getApplicationACLs();
+
       LOG.info("maxContainerCapability: " + maxContainerCapability.getMemory());
     } catch (Exception are) {
       LOG.error("Exception while registering", are);
@@ -225,19 +223,25 @@ public abstract class RMCommunicator extends AbstractService
       FinishApplicationMasterRequest request =
           FinishApplicationMasterRequest.newInstance(finishState,
             sb.toString(), historyUrl);
-      //huanke
+
+      // riza
       if (isInterceptEvent) {
-        EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
-            NodeRole.RM, NodeState.ALIVE, InterceptedEventType.AM_RM_UNREGISTER);
+        EventInterceptor interceptor =
+            new EventInterceptor(NodeRole.AM, NodeRole.RM, NodeState.ALIVE,
+                InterceptedEventType.AM_RM_UNREGISTER);
         interceptor.printToLog();
         interceptor.submitAndWait();
-        if (interceptor.hasSAMCResponse()) {
-          scheduler.finishApplicationMaster(request);
-          LOG.info(
-              "@HK -> SAMC response to RMCommunicator to enable UnregisterApplicationMaster");
-        }
-      } else {
-        scheduler.finishApplicationMaster(request);
+      }
+
+      scheduler.finishApplicationMaster(request);
+
+      // riza
+      if (isInterceptEvent) {
+        EventInterceptor interceptor =
+            new EventInterceptor(NodeRole.RM, NodeRole.AM, NodeState.ALIVE,
+                InterceptedEventType.RM_AM_RESPOND_UNREGISTER);
+        interceptor.printToLog();
+        interceptor.submitAndWait();
       }
     } catch(Exception are) {
       LOG.error("Exception while unregistering ", are);

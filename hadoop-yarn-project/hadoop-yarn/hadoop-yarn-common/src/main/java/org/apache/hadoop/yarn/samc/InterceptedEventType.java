@@ -9,6 +9,7 @@ public enum InterceptedEventType {
   //AMLauncher startContainer()  (RM--> NM)
   RM_NM_AMLAUNCH,
   RM_NM_AMCLEANUP,
+  RM_NM_RESPOND_HB,
   RM_STATESTORE_REMOVE, //RM --> RM
   RM_STATESTORE_ADD,
 
@@ -16,7 +17,7 @@ public enum InterceptedEventType {
   AM_RM_REGISTER,
   AM_RM_UNREGISTER,
   //RMContainerRequestor
-  AM_RM_ALLOCATE_CONTAINER,
+  AM_RM_ALLOCATE_CONTAINER, // deprecated
   AM_RM_HEARTBEAT, //If there are resource request from AM --> RM, Otherwise there are some HB (empty)
 
   // ApplicationImpl (NM --> AM)
@@ -32,5 +33,10 @@ public enum InterceptedEventType {
 
   // NM to both AM/RM
   NM_RESPOND_CONTAINERS_START,
-  NM_RESPOND_CONTAINERS_STOP
+  NM_RESPOND_CONTAINERS_STOP,
+
+  // RM respond to AM (RM --> AM)
+  RM_AM_RESPOND_HB,
+  RM_AM_RESPOND_REGISTER,
+  RM_AM_RESPOND_UNREGISTER
 }
