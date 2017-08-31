@@ -1070,6 +1070,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 //        }
 
         appAttempt.eventHandler.handle(new AMLauncherEvent(AMLauncherEventType.CLEANUP, appAttempt));
+      }
     }
   }
 
