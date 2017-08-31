@@ -53,6 +53,10 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.samc.EventInterceptor;
+import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.NodeRole;
+import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.DelayedProcessKiller;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
@@ -98,6 +102,9 @@ public class ContainerLaunch implements Callable<Integer> {
 
   private final LocalDirsHandlerService dirsHandler;
 
+  // riza: samc
+  private boolean isInterceptEvent = false;
+
   public ContainerLaunch(Context context, Configuration configuration,
       Dispatcher dispatcher, ContainerExecutor exec, Application app,
       Container container, LocalDirsHandlerService dirsHandler) {
@@ -114,6 +121,9 @@ public class ContainerLaunch implements Callable<Integer> {
     this.maxKillWaitTime =
         conf.getLong(YarnConfiguration.NM_PROCESS_KILL_WAIT_MS,
             YarnConfiguration.DEFAULT_NM_PROCESS_KILL_WAIT_MS);
+
+    isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+        YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
   }
 
   @Override
@@ -268,6 +278,14 @@ public class ContainerLaunch implements Callable<Integer> {
     } finally {
       completed.set(true);
       exec.deactivateContainer(containerID);
+
+      // riza: report AM termination
+      if (isInterceptEvent && (containerID.getId() == 1)) {
+        EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
+            NodeRole.NM, NodeState.DEAD, InterceptedEventType.AM_NM_MASTER_TERMINATE);
+        interceptor.printToLog();
+        interceptor.submitAndWait();
+      }
     }
 
     if (LOG.isDebugEnabled()) {

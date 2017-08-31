@@ -257,8 +257,8 @@ public class ContainerLauncherImpl extends AbstractService implements
     super.serviceInit(conf);
     cmProxy = new ContainerManagementProtocolProxy(conf);
 
-    // isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
-    //     YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
+    isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+        YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
   }
 
   protected void serviceStart() throws Exception {

@@ -25,6 +25,7 @@ public enum InterceptedEventType {
   // ContainerLauncherImpl (AM --> NM)
   AM_NM_CONTAINER_REMOTE_LAUNCH,
   AM_NM_CONTAINER_REMOTE_CLEANUP,
+  AM_NM_MASTER_TERMINATE,
 
   // NM heartbeat to RM
   NM_RM_HEARTBEAT
