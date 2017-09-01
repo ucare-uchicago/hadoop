@@ -162,14 +162,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     AllocateResponse allocateResponse;
     try {
 
-      if (isInterceptEvent && ask.size() > 0) {
-        EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
-            NodeRole.RM, org.apache.hadoop.yarn.samc.NodeState.ALIVE,
-            InterceptedEventType.AM_RM_HEARTBEAT);
-        interceptor.printToLog();
-        interceptor.submitAndWait();
-      }
-
+      // riza: do heartbeat to RM here
       allocateResponse = scheduler.allocate(allocateRequest);
 
     } catch (YarnException e) {

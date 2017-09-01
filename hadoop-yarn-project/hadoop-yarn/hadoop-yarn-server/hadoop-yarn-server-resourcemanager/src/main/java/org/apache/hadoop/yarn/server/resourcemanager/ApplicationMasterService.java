@@ -427,6 +427,14 @@ public class ApplicationMasterService extends AbstractService implements
           this.rScheduler.allocate(appAttemptId, ask, release, 
               blacklistAdditions, blacklistRemovals);
 
+      if (isInterceptEvent && allocation.getContainers().size() > 0) {
+        EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
+            NodeRole.RM, org.apache.hadoop.yarn.samc.NodeState.ALIVE,
+            InterceptedEventType.AM_RM_HEARTBEAT);
+        interceptor.printToLog();
+        interceptor.submitAndWait();
+      }
+
       RMApp app = this.rmContext.getRMApps().get(
           appAttemptId.getApplicationId());
       RMAppAttempt appAttempt = app.getRMAppAttempt(appAttemptId);
