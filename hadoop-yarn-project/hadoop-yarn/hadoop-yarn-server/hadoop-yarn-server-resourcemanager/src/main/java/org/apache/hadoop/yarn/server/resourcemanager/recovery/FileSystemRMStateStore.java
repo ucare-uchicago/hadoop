@@ -84,6 +84,9 @@ public class FileSystemRMStateStore extends RMStateStore {
   @VisibleForTesting
   Path fsWorkingPath;
 
+  // riza: samc
+  private boolean isInterceptEvent = false;
+
   public synchronized void initInternal(Configuration conf)
       throws Exception{
 
@@ -91,6 +94,9 @@ public class FileSystemRMStateStore extends RMStateStore {
     rootDirPath = new Path(fsWorkingPath, ROOT_DIR_NAME);
     rmDTSecretManagerRoot = new Path(rootDirPath, RM_DT_SECRET_MANAGER_ROOT);
     rmAppRoot = new Path(rootDirPath, RM_APP_ROOT);
+
+    isInterceptEvent = conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+        YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
 
     // create filesystem
     fs = fsWorkingPath.getFileSystem(conf);
@@ -127,15 +133,18 @@ public class FileSystemRMStateStore extends RMStateStore {
           if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
             // application
             // riza: report RECOVERING state here
-            StatusNotifier interceptor =
-                new StatusNotifier(NodeRole.RM, NodeState.RM_AM_RECOVERING);
-            interceptor.printToLog();
-            interceptor.submit();
-            // riza: notify DMCK for verification later
-            VerificationNotifier notifier = new VerificationNotifier(NodeRole.RM,
-                "doRecovery", String.valueOf(System.currentTimeMillis()));
-            notifier.printToLog();
-            notifier.submit();
+            if (isInterceptEvent) {
+              StatusNotifier interceptor =
+                  new StatusNotifier(NodeRole.RM, NodeState.RM_AM_RECOVERING);
+              interceptor.printToLog();
+              interceptor.submit();
+              // riza: notify DMCK for verification later
+              VerificationNotifier notifier =
+                  new VerificationNotifier(NodeRole.RM, "doRecovery",
+                      String.valueOf(System.currentTimeMillis()));
+              notifier.printToLog();
+              notifier.submit();
+            }
             LOG.info("Loading application from node: " + childNodeName);
             ApplicationId appId = ConverterUtils.toApplicationId(childNodeName);
             ApplicationStateDataPBImpl appStateData =

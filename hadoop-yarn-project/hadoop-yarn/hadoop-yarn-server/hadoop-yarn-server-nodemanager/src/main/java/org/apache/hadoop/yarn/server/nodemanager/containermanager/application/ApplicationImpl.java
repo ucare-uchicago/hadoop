@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRetentionPolicy;
 import org.apache.hadoop.yarn.samc.EventInterceptor;
-import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.EventType;
 import org.apache.hadoop.yarn.samc.NodeRole;
 import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.server.nodemanager.Context;

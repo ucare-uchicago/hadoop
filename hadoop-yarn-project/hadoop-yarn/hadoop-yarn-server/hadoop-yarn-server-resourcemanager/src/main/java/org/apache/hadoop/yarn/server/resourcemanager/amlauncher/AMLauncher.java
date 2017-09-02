@@ -55,7 +55,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.samc.EventInterceptor;
-import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.EventType;
 import org.apache.hadoop.yarn.samc.NodeRole;
 import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -128,7 +128,7 @@ public class AMLauncher implements Runnable {
 
     if (isInterceptEvent) {
       EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
-          NodeRole.NM, NodeState.ALIVE, InterceptedEventType.RM_NM_AMLAUNCH);
+          NodeRole.NM, NodeState.ALIVE, EventType.RM_NM_AMLAUNCH);
       interceptor.printToLog();
       interceptor.submitAndWait();
     }
@@ -139,7 +139,7 @@ public class AMLauncher implements Runnable {
     if (isInterceptEvent) {
       EventInterceptor interceptor =
           new EventInterceptor(NodeRole.NM, NodeRole.RM, NodeState.ALIVE,
-              InterceptedEventType.NM_RESPOND_CONTAINERS_START);
+              EventType.NM_RESPOND_CONTAINERS_START);
       interceptor.printToLog();
       interceptor.submitAndWait();
     }
@@ -165,7 +165,7 @@ public class AMLauncher implements Runnable {
 
     if (isInterceptEvent) {
       EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
-          NodeRole.NM, NodeState.ALIVE, InterceptedEventType.RM_NM_AMCLEANUP);
+          NodeRole.NM, NodeState.ALIVE, EventType.RM_NM_AMCLEANUP);
       interceptor.printToLog();
       interceptor.submitAndWait();
     }
@@ -176,7 +176,7 @@ public class AMLauncher implements Runnable {
     if (isInterceptEvent) {
       EventInterceptor interceptor =
           new EventInterceptor(NodeRole.NM, NodeRole.RM, NodeState.ALIVE,
-              InterceptedEventType.NM_RESPOND_CONTAINERS_STOP);
+              EventType.NM_RESPOND_CONTAINERS_STOP);
       interceptor.printToLog();
       interceptor.submitAndWait();
     }

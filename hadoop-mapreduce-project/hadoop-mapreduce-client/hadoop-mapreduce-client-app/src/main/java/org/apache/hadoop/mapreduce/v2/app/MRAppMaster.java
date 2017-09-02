@@ -128,9 +128,9 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.samc.EventInterceptor;
-import org.apache.hadoop.yarn.samc.InterceptedEventType;
 import org.apache.hadoop.yarn.samc.NodeRole;
 import org.apache.hadoop.yarn.samc.NodeState;
+import org.apache.hadoop.yarn.samc.StatusNotifier;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.util.Clock;
@@ -1343,13 +1343,19 @@ public class MRAppMaster extends CompositeService {
       // riza: mock message NM_AM_INIT_DONE to mark AM launched
       if (isInterceptEvent) {
         EventInterceptor interceptor = new EventInterceptor(NodeRole.NM,
-            NodeRole.AM, NodeState.ALIVE, InterceptedEventType.NM_AM_INIT_DONE);
+            NodeRole.AM, NodeState.ALIVE, org.apache.hadoop.yarn.samc.EventType.NM_AM_INIT_DONE);
         interceptor.printToLog();
         interceptor.submitAndWait();
         if (interceptor.hasSAMCResponse()) {
           LOG.info("samc: AM is kicking in!");
           // continue
         }
+
+        // riza: report INIT state here
+        StatusNotifier notifier = new StatusNotifier(NodeRole.AM,
+            org.apache.hadoop.yarn.samc.NodeState.AM_INIT);
+        notifier.printToLog();
+        notifier.submit();
       }
 
       initAndStartAppMaster(appMaster, conf, jobUserName);

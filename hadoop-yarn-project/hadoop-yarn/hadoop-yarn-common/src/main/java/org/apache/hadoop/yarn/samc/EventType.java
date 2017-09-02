@@ -5,7 +5,7 @@ package org.apache.hadoop.yarn.samc;
  * @author riza
  *
  */
-public enum InterceptedEventType {
+public enum EventType {
   //AMLauncher startContainer()  (RM--> NM)
   RM_NM_AMLAUNCH,
   RM_NM_AMCLEANUP,

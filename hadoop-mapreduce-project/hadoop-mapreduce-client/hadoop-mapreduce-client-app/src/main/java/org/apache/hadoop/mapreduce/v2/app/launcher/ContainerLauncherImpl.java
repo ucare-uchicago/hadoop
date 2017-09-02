@@ -57,7 +57,7 @@ import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy.C
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.samc.EventInterceptor;
-import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.EventType;
 import org.apache.hadoop.yarn.samc.NodeRole;
 import org.apache.hadoop.yarn.samc.NodeState;
 
@@ -161,7 +161,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         if (isInterceptEvent) {
           EventInterceptor interceptor =
               new EventInterceptor(NodeRole.AM, NodeRole.NM, NodeState.ALIVE,
-                  InterceptedEventType.AM_NM_CONTAINER_REMOTE_LAUNCH);
+                  EventType.AM_NM_CONTAINER_REMOTE_LAUNCH);
           interceptor.printToLog();
           interceptor.submitAndWait();
         }
@@ -173,7 +173,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         if (isInterceptEvent) {
           EventInterceptor interceptor =
               new EventInterceptor(NodeRole.NM, NodeRole.AM, NodeState.ALIVE,
-                  InterceptedEventType.NM_RESPOND_CONTAINERS_START);
+                  EventType.NM_RESPOND_CONTAINERS_START);
           interceptor.printToLog();
           interceptor.submitAndWait();
         }
@@ -236,7 +236,7 @@ public class ContainerLauncherImpl extends AbstractService implements
           if (isInterceptEvent) {
             EventInterceptor interceptor =
                 new EventInterceptor(NodeRole.AM, NodeRole.NM, NodeState.ALIVE,
-                    InterceptedEventType.AM_NM_CONTAINER_REMOTE_CLEANUP);
+                    EventType.AM_NM_CONTAINER_REMOTE_CLEANUP);
             interceptor.printToLog();
             interceptor.submitAndWait();
           }
@@ -248,7 +248,7 @@ public class ContainerLauncherImpl extends AbstractService implements
           if (isInterceptEvent) {
             EventInterceptor interceptor =
                 new EventInterceptor(NodeRole.NM, NodeRole.AM, NodeState.ALIVE,
-                    InterceptedEventType.NM_RESPOND_CONTAINERS_STOP);
+                    EventType.NM_RESPOND_CONTAINERS_STOP);
             interceptor.printToLog();
             interceptor.submitAndWait();
           }

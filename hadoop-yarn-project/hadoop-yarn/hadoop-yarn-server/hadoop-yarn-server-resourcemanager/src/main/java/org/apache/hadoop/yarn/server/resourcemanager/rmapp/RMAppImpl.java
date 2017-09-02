@@ -686,11 +686,6 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   private static class AppFinishedTransition extends FinalTransition {
     public void transition(RMAppImpl app, RMAppEvent event) {
-      // riza: report FINISHED state here
-      StatusNotifier interceptor =
-          new StatusNotifier(NodeRole.RM, org.apache.hadoop.yarn.samc.NodeState.RM_AM_FINISHED);
-      interceptor.printToLog();
-      interceptor.submit();
       RMAppFinishedAttemptEvent finishedEvent =
           (RMAppFinishedAttemptEvent)event;
       app.diagnostics.append(finishedEvent.getDiagnostics());

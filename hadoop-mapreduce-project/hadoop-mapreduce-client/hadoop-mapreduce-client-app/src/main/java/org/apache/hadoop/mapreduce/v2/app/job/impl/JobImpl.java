@@ -1016,11 +1016,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     JobStateInternal currentState = getInternalState();
     if (completedTaskCount == tasks.size()
         && currentState == JobStateInternal.RUNNING) {
-      // riza: report COMMITTING state here
-      StatusNotifier interceptor = new StatusNotifier(NodeRole.AM,
-          org.apache.hadoop.yarn.samc.NodeState.AM_COMMITTING);
-      interceptor.printToLog();
-      interceptor.submit();
       eventHandler.handle(new CommitterJobCommitEvent(jobId, getJobContext()));
       return JobStateInternal.COMMITTING;
     }
@@ -1307,12 +1302,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
      */
     @Override
     public JobStateInternal transition(JobImpl job, JobEvent event) {
-      // riza: report INIT state here
-      StatusNotifier interceptor = new StatusNotifier(NodeRole.AM,
-          org.apache.hadoop.yarn.samc.NodeState.AM_INIT);
-      interceptor.printToLog();
-      interceptor.submit();
-
       job.metrics.submittedJob(job);
       job.metrics.preparingJob(job);
       try {
@@ -1497,12 +1486,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       implements SingleArcTransition<JobImpl, JobEvent> {
     @Override
     public void transition(JobImpl job, JobEvent event) {
-      // riza: report RUNNING state here
-      StatusNotifier interceptor = new StatusNotifier(NodeRole.AM,
-          org.apache.hadoop.yarn.samc.NodeState.AM_RUNNING);
-      interceptor.printToLog();
-      interceptor.submit();
-
       job.setupProgress = 1.0f;
       job.scheduleTasks(job.mapTasks, job.numReduceTasks == 0);
       job.scheduleTasks(job.reduceTasks, true);

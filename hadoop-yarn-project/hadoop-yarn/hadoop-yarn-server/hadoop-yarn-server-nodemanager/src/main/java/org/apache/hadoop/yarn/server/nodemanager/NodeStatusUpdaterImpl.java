@@ -49,7 +49,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.samc.EventInterceptor;
-import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.EventType;
 import org.apache.hadoop.yarn.samc.NodeRole;
 import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
@@ -401,7 +401,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             if (isInterceptEvent && containerCountChanged) {
               EventInterceptor interceptor =
                   new EventInterceptor(NodeRole.NM, NodeRole.RM,
-                      NodeState.ALIVE, InterceptedEventType.NM_RM_HEARTBEAT);
+                      NodeState.ALIVE, EventType.NM_RM_HEARTBEAT);
               interceptor.printToLog();
               interceptor.submitAndWait();
             }
@@ -411,7 +411,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             if (isInterceptEvent && containerCountChanged) {
               EventInterceptor interceptor =
                   new EventInterceptor(NodeRole.RM, NodeRole.NM,
-                      NodeState.ALIVE, InterceptedEventType.RM_NM_RESPOND_HB);
+                      NodeState.ALIVE, EventType.RM_NM_RESPOND_HB);
               interceptor.printToLog();
               interceptor.submitAndWait();
             }

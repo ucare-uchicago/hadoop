@@ -27,7 +27,7 @@ public class EventInterceptor {
   int sendNode;
   int recvNode;
   int nodeState; // 1 represents alived and 0 represents crashed.
-  InterceptedEventType eventType;
+  EventType eventType;
   int eventTypeId;
   int eventId;
 
@@ -38,7 +38,7 @@ public class EventInterceptor {
   boolean samcResponse;
 
   public EventInterceptor(NodeRole roleS, NodeRole roleR, NodeState nodeState,
-      InterceptedEventType interceptEventType) {
+      EventType interceptEventType) {
     conf = new YarnConfiguration();
 
     this.sendNode = roleS.ordinal();
@@ -54,7 +54,7 @@ public class EventInterceptor {
     this.eventFile = new File(fileDir + "/new/" + filename);
   }
 
-  public InterceptedEventType getEventType() {
+  public EventType getEventType() {
     return eventType;
   }
 

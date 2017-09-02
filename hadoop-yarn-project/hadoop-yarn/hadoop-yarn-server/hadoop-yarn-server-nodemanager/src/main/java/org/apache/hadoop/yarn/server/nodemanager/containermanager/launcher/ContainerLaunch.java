@@ -54,7 +54,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.samc.EventInterceptor;
-import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.EventType;
 import org.apache.hadoop.yarn.samc.NodeRole;
 import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
@@ -282,7 +282,7 @@ public class ContainerLaunch implements Callable<Integer> {
       // riza: report AM termination
       if (isInterceptEvent && (containerID.getId() == 1)) {
         EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
-            NodeRole.NM, NodeState.DEAD, InterceptedEventType.AM_NM_MASTER_TERMINATE);
+            NodeRole.NM, NodeState.DEAD, EventType.AM_NM_MASTER_TERMINATE);
         interceptor.printToLog();
         interceptor.submitAndWait();
       }

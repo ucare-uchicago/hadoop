@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.samc.EventInterceptor;
-import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.EventType;
 import org.apache.hadoop.yarn.samc.NodeRole;
 import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -245,7 +245,7 @@ public abstract class RMStateStore {
     //huanke
     if (isInterceptEvent) {
       EventInterceptor interceptor = new EventInterceptor(
-          NodeRole.RM, NodeRole.RM, NodeState.ALIVE, InterceptedEventType.RM_STATESTORE_ADD);
+          NodeRole.RM, NodeRole.RM, NodeState.ALIVE, EventType.RM_STATESTORE_ADD);
       interceptor.printToLog();
       interceptor.submitAndWait();
       if (interceptor.hasSAMCResponse()) {
@@ -392,7 +392,7 @@ public abstract class RMStateStore {
     if (isInterceptEvent) {
 
       EventInterceptor interceptor = new EventInterceptor(
-          NodeRole.RM, NodeRole.RM, NodeState.ALIVE, InterceptedEventType.RM_STATESTORE_REMOVE);
+          NodeRole.RM, NodeRole.RM, NodeState.ALIVE, EventType.RM_STATESTORE_REMOVE);
       interceptor.printToLog();
       interceptor.submitAndWait();
       if (interceptor.hasSAMCResponse()) {

@@ -70,7 +70,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.samc.EventInterceptor;
-import org.apache.hadoop.yarn.samc.InterceptedEventType;
+import org.apache.hadoop.yarn.samc.EventType;
 import org.apache.hadoop.yarn.samc.NodeRole;
 import org.apache.hadoop.yarn.samc.VerificationNotifier;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -311,11 +311,13 @@ public class ApplicationMasterService extends AbstractService implements
 
     // Allow only one thread in AM to do finishApp at a time.
     synchronized (lastResponse) {
-      // riza: notify DMCK for verification later
-      VerificationNotifier notifier = new VerificationNotifier(NodeRole.RM,
-          "receiveUnregister", String.valueOf(System.currentTimeMillis()));
-      notifier.printToLog();
-      notifier.submit();
+      if (isInterceptEvent) {
+        // riza: notify DMCK for verification later
+        VerificationNotifier notifier = new VerificationNotifier(NodeRole.RM,
+            "receiveUnregister", String.valueOf(System.currentTimeMillis()));
+        notifier.printToLog();
+        notifier.submit();
+      }
 
       this.amLivelinessMonitor.receivedPing(applicationAttemptId);
 
@@ -430,7 +432,7 @@ public class ApplicationMasterService extends AbstractService implements
       if (isInterceptEvent && allocation.getContainers().size() > 0) {
         EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
             NodeRole.RM, org.apache.hadoop.yarn.samc.NodeState.ALIVE,
-            InterceptedEventType.AM_RM_HEARTBEAT);
+            EventType.AM_RM_HEARTBEAT);
         interceptor.printToLog();
         interceptor.submitAndWait();
       }
@@ -501,7 +503,7 @@ public class ApplicationMasterService extends AbstractService implements
           .size() > 0) {
         EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
             NodeRole.AM, org.apache.hadoop.yarn.samc.NodeState.ALIVE,
-            InterceptedEventType.RM_AM_RESPOND_HB);
+            EventType.RM_AM_RESPOND_HB);
         interceptor.printToLog();
         interceptor.submitAndWait();
       }
