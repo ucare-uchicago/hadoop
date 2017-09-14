@@ -57,7 +57,6 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.samc.EventInterceptor;
 import org.apache.hadoop.yarn.samc.EventType;
 import org.apache.hadoop.yarn.samc.NodeRole;
-import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -128,7 +127,7 @@ public class AMLauncher implements Runnable {
 
     if (isInterceptEvent) {
       EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
-          NodeRole.NM, NodeState.ALIVE, EventType.RM_NM_AMLAUNCH);
+          NodeRole.NM, EventType.RM_NM_AMLAUNCH, "");
       interceptor.printToLog();
       interceptor.submitAndWait();
     }
@@ -137,9 +136,8 @@ public class AMLauncher implements Runnable {
         containerMgrProxy.startContainers(allRequests);
 
     if (isInterceptEvent) {
-      EventInterceptor interceptor =
-          new EventInterceptor(NodeRole.NM, NodeRole.RM, NodeState.ALIVE,
-              EventType.NM_RESPOND_CONTAINERS_START);
+      EventInterceptor interceptor = new EventInterceptor(NodeRole.NM,
+          NodeRole.RM, EventType.NM_RESPOND_CONTAINERS_START, "");
       interceptor.printToLog();
       interceptor.submitAndWait();
     }
@@ -165,7 +163,7 @@ public class AMLauncher implements Runnable {
 
     if (isInterceptEvent) {
       EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
-          NodeRole.NM, NodeState.ALIVE, EventType.RM_NM_AMCLEANUP);
+          NodeRole.NM, EventType.RM_NM_AMCLEANUP, "");
       interceptor.printToLog();
       interceptor.submitAndWait();
     }
@@ -174,9 +172,8 @@ public class AMLauncher implements Runnable {
         containerMgrProxy.stopContainers(stopRequest);
 
     if (isInterceptEvent) {
-      EventInterceptor interceptor =
-          new EventInterceptor(NodeRole.NM, NodeRole.RM, NodeState.ALIVE,
-              EventType.NM_RESPOND_CONTAINERS_STOP);
+      EventInterceptor interceptor = new EventInterceptor(NodeRole.NM,
+          NodeRole.RM, EventType.NM_RESPOND_CONTAINERS_STOP, "");
       interceptor.printToLog();
       interceptor.submitAndWait();
     }

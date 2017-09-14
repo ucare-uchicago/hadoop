@@ -36,6 +36,9 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.samc.EventInterceptor;
+import org.apache.hadoop.yarn.samc.EventType;
+import org.apache.hadoop.yarn.samc.NodeRole;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
@@ -82,6 +85,9 @@ public class ResourceTrackerService extends AbstractService implements
   private int minAllocMb;
   private int minAllocVcores;
 
+  // riza
+  private boolean isInterceptEvent = false;
+
   static {
     resync.setNodeAction(NodeAction.RESYNC);
 
@@ -124,7 +130,11 @@ public class ResourceTrackerService extends AbstractService implements
     minAllocVcores = conf.getInt(
     	YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
     	YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
-    
+
+    this.isInterceptEvent =
+        conf.getBoolean(YarnConfiguration.SAMC_INTERCEPT_EVENT,
+            YarnConfiguration.DEFAULT_SAMC_INTERCEPT_EVENT);
+
     super.serviceInit(conf);
   }
 
@@ -233,9 +243,24 @@ public class ResourceTrackerService extends AbstractService implements
     return response;
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
+      throws YarnException, IOException {
+    NodeHeartbeatResponse realResponse = nodeHeartbeatImpl(request);
+
+    if (isInterceptEvent) {
+      EventInterceptor interceptor =
+          new EventInterceptor(NodeRole.RM, NodeRole.NM,
+              EventType.RM_NM_RESPOND_HB, "");
+      interceptor.printToLog();
+      interceptor.submitAndWait();
+    }
+
+    return realResponse;
+  }
+
+  @SuppressWarnings("unchecked")
+  public NodeHeartbeatResponse nodeHeartbeatImpl(NodeHeartbeatRequest request)
       throws YarnException, IOException {
 
     NodeStatus remoteNodeStatus = request.getNodeStatus();

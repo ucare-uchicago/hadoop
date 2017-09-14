@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -51,7 +52,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.samc.EventInterceptor;
 import org.apache.hadoop.yarn.samc.EventType;
 import org.apache.hadoop.yarn.samc.NodeRole;
-import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.ServerRMProxy;
@@ -398,23 +398,22 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               .setLastKnownNMTokenMasterKey(NodeStatusUpdaterImpl.this.context
                 .getNMTokenSecretManager().getCurrentKey());
 
-            if (isInterceptEvent && containerCountChanged) {
+            if (isInterceptEvent) {
+              String message = "";
+              if (containerCountChanged) {
+                TreeMap<String, String> content = new TreeMap<String, String>();
+                content.put("containerCount", String.valueOf(lastContainerCount));
+                message = content.toString();
+              }
+
               EventInterceptor interceptor =
                   new EventInterceptor(NodeRole.NM, NodeRole.RM,
-                      NodeState.ALIVE, EventType.NM_RM_HEARTBEAT);
+                      EventType.NM_RM_HEARTBEAT, message);
               interceptor.printToLog();
               interceptor.submitAndWait();
             }
 
             response = resourceTracker.nodeHeartbeat(request);
-
-            if (isInterceptEvent && containerCountChanged) {
-              EventInterceptor interceptor =
-                  new EventInterceptor(NodeRole.RM, NodeRole.NM,
-                      NodeState.ALIVE, EventType.RM_NM_RESPOND_HB);
-              interceptor.printToLog();
-              interceptor.submitAndWait();
-            }
 
             //get next heartbeat interval from response
             nextHeartBeatInterval = response.getNextHeartBeatInterval();

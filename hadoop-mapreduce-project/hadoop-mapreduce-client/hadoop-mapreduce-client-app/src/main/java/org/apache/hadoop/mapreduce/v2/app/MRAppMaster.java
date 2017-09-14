@@ -1343,7 +1343,7 @@ public class MRAppMaster extends CompositeService {
       // riza: mock message NM_AM_INIT_DONE to mark AM launched
       if (isInterceptEvent) {
         EventInterceptor interceptor = new EventInterceptor(NodeRole.NM,
-            NodeRole.AM, NodeState.ALIVE, org.apache.hadoop.yarn.samc.EventType.NM_AM_INIT_DONE);
+            NodeRole.AM, org.apache.hadoop.yarn.samc.EventType.NM_AM_INIT_DONE, "");
         interceptor.printToLog();
         interceptor.submitAndWait();
         if (interceptor.hasSAMCResponse()) {

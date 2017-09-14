@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -38,7 +39,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -290,6 +290,15 @@ public class ApplicationMasterService extends AbstractService implements
             .getClientToAMTokenSecretManager()
             .getMasterKey(applicationAttemptId).getEncoded()));        
       }
+
+      // riza
+      if (isInterceptEvent) {
+        EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
+            NodeRole.AM, EventType.RM_AM_RESPOND_REGISTER, "");
+        interceptor.printToLog();
+        interceptor.submitAndWait();
+      }
+
       return response;
     }
   }
@@ -328,6 +337,15 @@ public class ApplicationMasterService extends AbstractService implements
 
       FinishApplicationMasterResponse response = recordFactory
           .newRecordInstance(FinishApplicationMasterResponse.class);
+
+      // riza
+      if (isInterceptEvent) {
+        EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
+            NodeRole.AM, EventType.RM_AM_RESPOND_UNREGISTER, "");
+        interceptor.printToLog();
+        interceptor.submitAndWait();
+      }
+
       return response;
     }
   }
@@ -429,14 +447,6 @@ public class ApplicationMasterService extends AbstractService implements
           this.rScheduler.allocate(appAttemptId, ask, release, 
               blacklistAdditions, blacklistRemovals);
 
-      if (isInterceptEvent && allocation.getContainers().size() > 0) {
-        EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
-            NodeRole.RM, org.apache.hadoop.yarn.samc.NodeState.ALIVE,
-            EventType.AM_RM_HEARTBEAT);
-        interceptor.printToLog();
-        interceptor.submitAndWait();
-      }
-
       RMApp app = this.rmContext.getRMApps().get(
           appAttemptId.getApplicationId());
       RMAppAttempt appAttempt = app.getRMAppAttempt(appAttemptId);
@@ -499,11 +509,16 @@ public class ApplicationMasterService extends AbstractService implements
         return resync;
       }
 
-      if (isInterceptEvent && allocateResponse.getAllocatedContainers()
-          .size() > 0) {
+      if (isInterceptEvent) {
+        String message = "";
+        if (allocateResponse.getAllocatedContainers().size() > 0) {
+          TreeMap<String, String> content = new TreeMap<String, String>();
+          content.put("allocate", String.valueOf(allocateResponse.getAllocatedContainers().size()));
+          message = content.toString();
+        }
+
         EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
-            NodeRole.AM, org.apache.hadoop.yarn.samc.NodeState.ALIVE,
-            EventType.RM_AM_RESPOND_HB);
+            NodeRole.AM, EventType.RM_AM_RESPOND_HB, message);
         interceptor.printToLog();
         interceptor.submitAndWait();
       }

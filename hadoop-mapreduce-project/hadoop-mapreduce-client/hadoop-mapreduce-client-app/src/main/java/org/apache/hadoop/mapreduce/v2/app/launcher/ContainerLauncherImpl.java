@@ -58,7 +58,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.samc.EventInterceptor;
 import org.apache.hadoop.yarn.samc.NodeRole;
-import org.apache.hadoop.yarn.samc.NodeState;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -159,8 +158,9 @@ public class ContainerLauncherImpl extends AbstractService implements
         // riza
         if (isInterceptEvent) {
           EventInterceptor interceptor =
-              new EventInterceptor(NodeRole.AM, NodeRole.NM, NodeState.ALIVE,
-                  org.apache.hadoop.yarn.samc.EventType.AM_NM_CONTAINER_REMOTE_LAUNCH);
+              new EventInterceptor(NodeRole.AM, NodeRole.NM,
+                  org.apache.hadoop.yarn.samc.EventType.AM_NM_CONTAINER_REMOTE_LAUNCH,
+                  "");
           interceptor.printToLog();
           interceptor.submitAndWait();
         }
@@ -171,8 +171,9 @@ public class ContainerLauncherImpl extends AbstractService implements
         // riza
         if (isInterceptEvent) {
           EventInterceptor interceptor =
-              new EventInterceptor(NodeRole.NM, NodeRole.AM, NodeState.ALIVE,
-                  org.apache.hadoop.yarn.samc.EventType.NM_RESPOND_CONTAINERS_START);
+              new EventInterceptor(NodeRole.NM, NodeRole.AM,
+                  org.apache.hadoop.yarn.samc.EventType.NM_RESPOND_CONTAINERS_START,
+                  "");
           interceptor.printToLog();
           interceptor.submitAndWait();
         }
@@ -234,8 +235,9 @@ public class ContainerLauncherImpl extends AbstractService implements
           // riza
           if (isInterceptEvent) {
             EventInterceptor interceptor =
-                new EventInterceptor(NodeRole.AM, NodeRole.NM, NodeState.ALIVE,
-                    org.apache.hadoop.yarn.samc.EventType.AM_NM_CONTAINER_REMOTE_CLEANUP);
+                new EventInterceptor(NodeRole.AM, NodeRole.NM,
+                    org.apache.hadoop.yarn.samc.EventType.AM_NM_CONTAINER_REMOTE_CLEANUP,
+                    "");
             interceptor.printToLog();
             interceptor.submitAndWait();
           }
@@ -246,8 +248,9 @@ public class ContainerLauncherImpl extends AbstractService implements
           // riza
           if (isInterceptEvent) {
             EventInterceptor interceptor =
-                new EventInterceptor(NodeRole.NM, NodeRole.AM, NodeState.ALIVE,
-                    org.apache.hadoop.yarn.samc.EventType.NM_RESPOND_CONTAINERS_STOP);
+                new EventInterceptor(NodeRole.NM, NodeRole.AM,
+                    org.apache.hadoop.yarn.samc.EventType.NM_RESPOND_CONTAINERS_STOP,
+                    "");
             interceptor.printToLog();
             interceptor.submitAndWait();
           }

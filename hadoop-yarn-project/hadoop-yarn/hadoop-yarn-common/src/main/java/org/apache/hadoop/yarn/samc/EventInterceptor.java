@@ -26,7 +26,7 @@ public class EventInterceptor {
 
   int sendNode;
   int recvNode;
-  int nodeState; // 1 represents alived and 0 represents crashed.
+  String msgContent;
   EventType eventType;
   int eventTypeId;
   int eventId;
@@ -37,13 +37,13 @@ public class EventInterceptor {
 
   boolean samcResponse;
 
-  public EventInterceptor(NodeRole roleS, NodeRole roleR, NodeState nodeState,
-      EventType interceptEventType) {
+  public EventInterceptor(NodeRole roleS, NodeRole roleR,
+      EventType interceptEventType, String content) {
     conf = new YarnConfiguration();
 
     this.sendNode = roleS.ordinal();
     this.recvNode = roleR.ordinal();
-    this.nodeState = nodeState.ordinal();
+    this.msgContent = content;
     this.eventType = interceptEventType;
     this.eventTypeId = interceptEventType.ordinal();
     this.eventId = getEventId();
@@ -74,7 +74,7 @@ public class EventInterceptor {
       PrintWriter writer = new PrintWriter(eventFile, "UTF-8");
       writer.print("sendNode=" + sendNode + "\n");
       writer.print("recvNode=" + recvNode + "\n");
-      writer.print("nodeState=" + nodeState + "\n");
+      writer.print("msgContent=" + msgContent + "\n");
       writer.print("eventTypeId=" + eventTypeId + "\n");
       writer.print("eventType=" + eventType + "\n");
       writer.print("eventId=" + eventId);
@@ -151,7 +151,6 @@ public class EventInterceptor {
     int hash = 1;
     hash = prime * hash + sendNode;
     hash = prime * hash + recvNode;
-    hash = prime * hash + nodeState;
     hash = prime * hash + eventTypeId;
     return hash;
   }
@@ -163,7 +162,8 @@ public class EventInterceptor {
   @Override
   public String toString() {
     return filename + "={sendNode: " + sendNode + ", recvNode: " + recvNode
-        + ", interceptEventType: " + eventType.toString() + "}";
+        + ", interceptEventType: " + eventType.toString()
+        + ", msgContent: " + msgContent + "}";
   }
 
   public void printToLog() {

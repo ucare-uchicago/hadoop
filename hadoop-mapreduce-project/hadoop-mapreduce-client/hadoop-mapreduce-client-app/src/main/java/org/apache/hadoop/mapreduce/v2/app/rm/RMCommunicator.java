@@ -57,7 +57,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.samc.EventInterceptor;
 import org.apache.hadoop.yarn.samc.EventType;
 import org.apache.hadoop.yarn.samc.NodeRole;
-import org.apache.hadoop.yarn.samc.NodeState;
 import org.apache.hadoop.yarn.samc.StatusNotifier;
 
 
@@ -161,7 +160,7 @@ public abstract class RMCommunicator extends AbstractService
       // riza
       if (isInterceptEvent) {
         EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
-            NodeRole.RM, NodeState.ALIVE, EventType.AM_RM_REGISTER);
+            NodeRole.RM, EventType.AM_RM_REGISTER, "");
         interceptor.printToLog();
         interceptor.submitAndWait();
       }
@@ -171,12 +170,6 @@ public abstract class RMCommunicator extends AbstractService
 
       // riza
       if (isInterceptEvent) {
-        EventInterceptor interceptor =
-            new EventInterceptor(NodeRole.RM, NodeRole.AM, NodeState.ALIVE,
-                EventType.RM_AM_RESPOND_REGISTER);
-        interceptor.printToLog();
-        interceptor.submitAndWait();
-
         // riza: report RUNNING state here
         StatusNotifier notifier = new StatusNotifier(NodeRole.AM,
             org.apache.hadoop.yarn.samc.NodeState.AM_RUNNING);
@@ -233,9 +226,8 @@ public abstract class RMCommunicator extends AbstractService
 
       // riza
       if (isInterceptEvent) {
-        EventInterceptor interceptor =
-            new EventInterceptor(NodeRole.AM, NodeRole.RM, NodeState.ALIVE,
-                EventType.AM_RM_UNREGISTER);
+        EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
+            NodeRole.RM, EventType.AM_RM_UNREGISTER, "");
         interceptor.printToLog();
         interceptor.submitAndWait();
       }
@@ -244,12 +236,6 @@ public abstract class RMCommunicator extends AbstractService
 
       // riza
       if (isInterceptEvent) {
-        EventInterceptor interceptor =
-            new EventInterceptor(NodeRole.RM, NodeRole.AM, NodeState.ALIVE,
-                EventType.RM_AM_RESPOND_UNREGISTER);
-        interceptor.printToLog();
-        interceptor.submitAndWait();
-
         // riza: report COMMITTING state here
         StatusNotifier notifier = new StatusNotifier(NodeRole.AM,
             org.apache.hadoop.yarn.samc.NodeState.AM_UNREGISTERED);

@@ -162,6 +162,21 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     AllocateResponse allocateResponse;
     try {
 
+      if (isInterceptEvent) {
+        String message = "";
+        if (ask.size() > 0 || release.size() > 0) {
+          TreeMap<String, String> content = new TreeMap<String, String>();
+          content.put("ask", String.valueOf(ask.size()));
+          content.put("release", String.valueOf(release.size()));
+          message = content.toString();
+        }
+
+        EventInterceptor interceptor = new EventInterceptor(NodeRole.AM,
+            NodeRole.RM, EventType.AM_RM_HEARTBEAT, message);
+        interceptor.printToLog();
+        interceptor.submitAndWait();
+      }
+
       // riza: do heartbeat to RM here
       allocateResponse = scheduler.allocate(allocateRequest);
 
