@@ -398,7 +398,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               .setLastKnownNMTokenMasterKey(NodeStatusUpdaterImpl.this.context
                 .getNMTokenSecretManager().getCurrentKey());
 
-            if (isInterceptEvent && nodeStatus.getContainersStatuses().size() > 0) {
+            if (isInterceptEvent && hasLivingContainer(nodeStatus)) {
               String message = "";
               if (containerCountChanged) {
                 TreeMap<String, String> content = new TreeMap<String, String>();
@@ -500,5 +500,19 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     statusUpdater =
         new Thread(statusUpdaterRunnable, "Node Status Updater");
     statusUpdater.start();
+  }
+
+  private boolean hasLivingContainer(NodeStatus nodeStatus) {
+    int liveCount = 0;
+    for (ContainerStatus cstatus : nodeStatus.getContainersStatuses()) {
+      if (cstatus.getState() == ContainerState.RUNNING) {
+        if (cstatus.getDiagnostics().isEmpty()) {
+          liveCount++;
+        }
+      } else {
+        liveCount++;
+      }
+    }
+    return liveCount > 0;
   }
 }

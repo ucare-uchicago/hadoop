@@ -28,6 +28,8 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -248,7 +250,7 @@ public class ResourceTrackerService extends AbstractService implements
       throws YarnException, IOException {
     NodeHeartbeatResponse realResponse = nodeHeartbeatImpl(request);
 
-    if (isInterceptEvent && request.getNodeStatus().getContainersStatuses().size() > 0) {
+    if (isInterceptEvent && hasLivingContainer(request.getNodeStatus())) {
       EventInterceptor interceptor =
           new EventInterceptor(NodeRole.RM, NodeRole.NM,
               EventType.RM_NM_RESPOND_HB, "");
@@ -257,6 +259,20 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     return realResponse;
+  }
+
+  private boolean hasLivingContainer(NodeStatus nodeStatus) {
+    int liveCount = 0;
+    for (ContainerStatus cstatus : nodeStatus.getContainersStatuses()) {
+      if (cstatus.getState() == ContainerState.RUNNING) {
+        if (cstatus.getDiagnostics().isEmpty()) {
+          liveCount++;
+        }
+      } else {
+        liveCount++;
+      }
+    }
+    return liveCount > 0;
   }
 
   @SuppressWarnings("unchecked")
