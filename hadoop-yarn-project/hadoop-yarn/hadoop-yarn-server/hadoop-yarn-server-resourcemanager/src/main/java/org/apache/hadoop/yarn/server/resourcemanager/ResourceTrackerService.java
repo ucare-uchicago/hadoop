@@ -248,13 +248,13 @@ public class ResourceTrackerService extends AbstractService implements
       throws YarnException, IOException {
     NodeHeartbeatResponse realResponse = nodeHeartbeatImpl(request);
 
-//    if (isInterceptEvent) {
-//      EventInterceptor interceptor =
-//          new EventInterceptor(NodeRole.RM, NodeRole.NM,
-//              EventType.RM_NM_RESPOND_HB, "");
-//      interceptor.printToLog();
-//      interceptor.submitAndWait();
-//    }
+    if (isInterceptEvent && request.getNodeStatus().getContainersStatuses().size() > 0) {
+      EventInterceptor interceptor =
+          new EventInterceptor(NodeRole.RM, NodeRole.NM,
+              EventType.RM_NM_RESPOND_HB, "");
+      interceptor.printToLog();
+      interceptor.submitAndWait();
+    }
 
     return realResponse;
   }

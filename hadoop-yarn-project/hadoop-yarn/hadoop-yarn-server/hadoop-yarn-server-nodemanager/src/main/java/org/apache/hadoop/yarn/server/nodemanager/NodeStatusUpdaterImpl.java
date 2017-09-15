@@ -398,7 +398,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               .setLastKnownNMTokenMasterKey(NodeStatusUpdaterImpl.this.context
                 .getNMTokenSecretManager().getCurrentKey());
 
-            if (isInterceptEvent && containerCountChanged) {
+            if (isInterceptEvent && nodeStatus.getContainersStatuses().size() > 0) {
               String message = "";
               if (containerCountChanged) {
                 TreeMap<String, String> content = new TreeMap<String, String>();
@@ -414,13 +414,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             }
 
             response = resourceTracker.nodeHeartbeat(request);
-
-            if (isInterceptEvent && containerCountChanged) {
-              EventInterceptor interceptor = new EventInterceptor(NodeRole.RM,
-                  NodeRole.NM, EventType.RM_NM_RESPOND_HB, "");
-              interceptor.printToLog();
-              interceptor.submitAndWait();
-            }
 
             //get next heartbeat interval from response
             nextHeartBeatInterval = response.getNextHeartBeatInterval();
