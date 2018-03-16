@@ -146,6 +146,7 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     LOG.info("@Cesar: Fetcher shutdown is enabled?: " + isFetcherShutDownEnabled);
     // Wait for shuffle to complete successfully
     while (!scheduler.waitUntilDone(PROGRESS_FREQUENCY)) {
+      LOG.info("@Kris: remaining Maps: " + scheduler.getRemainingMaps());
       reporter.progress();
       
       synchronized (this) {

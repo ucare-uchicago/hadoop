@@ -153,6 +153,10 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
         MRJobConfig.DEFAULT_MAX_SHUFFLE_FETCH_HOST_FAILURES);
   }
 
+  public int getRemainingMaps() {
+    return remainingMaps;
+  }
+
   @Override
   public void resolve(TaskCompletionEvent event) {
     switch (event.getTaskStatus()) {
