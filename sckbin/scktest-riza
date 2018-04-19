@@ -1,0 +1,35 @@
+#!/bin/sh
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+export HADOOP_CLASSPATH=${JAVA_HOME}/lib/tools.jar
+export HADOOP_PREFIX=${DIR}/..
+export HADOOP_CONF_DIR=${DIR}/hadoop-etc
+export HADOOP_HOME=${HADOOP_PREFIX}
+
+export PATH=${HADOOP_PREFIX}/bin:${HADOOP_PREFIX}/sbin:${PATH}
+
+cd ..
+
+# compile the code
+# ant jar
+# ant jar-test
+
+alljars=$CLASSPATH
+for jar in `ls lib/*.jar`; do
+  alljars="$alljars:$jar"
+done
+for jar in `ls lib/jetty-ext/*.jar`; do
+  alljars="$alljars:$jar"
+done
+for jar in `ls build/*.jar`; do
+  alljars="$alljars:$jar"
+done
+alljars="$alljars:$HADOOP_CONF_DIR"
+#java -cp $alljars org.apache.hadoop.conf.Configuration
+#java -cp $alljars -Dlog4j.configuration="src/test/log4j.properties" junit.textui.TestRunner org.apache.hadoop.hdfs.NNThroughputBenchmark -datanodes 32 -nodesToDecommission 16 -totalBlocks 1024 -replication 3
+
+#clsetup
+hadoop namenode -format
+hadoop -cp $alljars org.apache.hadoop.hdfs.NNThroughputBenchmark -op replication -datanodes 6 -nodesToDecommission 3 -totalBlocks 10 -replication 3 -isGEDA
