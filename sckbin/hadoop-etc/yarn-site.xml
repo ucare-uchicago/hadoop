@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<configuration>
+
+  <property>
+    <name>yarn.nodemanager.aux-services</name>
+    <value>mapreduce_shuffle</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+    <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.hostname</name>
+    <value>localhost</value>
+  </property>
+
+  <!--<property>
+    <name>yarn.resourcemanager.webapp.address</name>
+    <value>localhost:8088</value>
+  </property>-->
+
+  <property>
+    <name>yarn.resourcemanager.bind-host</name>
+    <value>0.0.0.0</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.resource.memory-mb</name>
+    <value>8192</value> <!-- 8GB -->
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.resource.cpu-vcores</name>
+    <value>8</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.log.retain-seconds</name>
+    <value>86400</value>
+  </property>
+
+</configuration>
