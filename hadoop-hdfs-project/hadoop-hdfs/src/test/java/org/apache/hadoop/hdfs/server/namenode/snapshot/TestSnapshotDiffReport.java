@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.HashMap;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,14 +50,14 @@ public class TestSnapshotDiffReport {
   protected static final short REPLICATION_1 = 2;
   protected static final long BLOCKSIZE = 1024;
   public static final int SNAPSHOTNUMBER = 10;
-  
+
   private final Path dir = new Path("/TestSnapshot");
   private final Path sub1 = new Path(dir, "sub1");
-  
+
   protected Configuration conf;
   protected MiniDFSCluster cluster;
   protected DistributedFileSystem hdfs;
-  
+
   private final HashMap<Path, Integer> snapshotNumberMap = new HashMap<Path, Integer>();
 
   @Before
@@ -74,7 +76,7 @@ public class TestSnapshotDiffReport {
       cluster = null;
     }
   }
-  
+
   private String genSnapshotName(Path snapshotDir) {
     int sNum = -1;
     if (snapshotNumberMap.containsKey(snapshotDir)) {
@@ -83,11 +85,11 @@ public class TestSnapshotDiffReport {
     snapshotNumberMap.put(snapshotDir, ++sNum);
     return "s" + sNum;
   }
-  
+
   /**
    * Create/modify/delete files under a given directory, also create snapshots
    * of directories.
-   */ 
+   */
   private void modifyAndCreateSnapshot(Path modifyDir, Path[] snapshotDirs)
       throws Exception {
     Path file10 = new Path(modifyDir, "file10");
@@ -108,7 +110,7 @@ public class TestSnapshotDiffReport {
       hdfs.allowSnapshot(snapshotDir);
       hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
     }
-    
+
     // delete file11
     hdfs.delete(file11, true);
     // modify file12
@@ -121,12 +123,12 @@ public class TestSnapshotDiffReport {
     DFSTestUtil.createFile(hdfs, file14, BLOCKSIZE, REPLICATION, seed);
     // create file15
     DFSTestUtil.createFile(hdfs, file15, BLOCKSIZE, REPLICATION, seed);
-    
+
     // create snapshot
     for (Path snapshotDir : snapshotDirs) {
       hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
     }
-    
+
     // create file11 again
     DFSTestUtil.createFile(hdfs, file11, BLOCKSIZE, REPLICATION, seed);
     // delete file12
@@ -139,7 +141,7 @@ public class TestSnapshotDiffReport {
     hdfs.delete(file14, true);
     // modify file15
     hdfs.setReplication(file15, (short) (REPLICATION - 1));
-    
+
     // create snapshot
     for (Path snapshotDir : snapshotDirs) {
       hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
@@ -147,7 +149,7 @@ public class TestSnapshotDiffReport {
     // modify file10
     hdfs.setReplication(file10, (short) (REPLICATION + 1));
   }
-  
+
   /** check the correctness of the diff reports */
   private void verifyDiffReport(Path dir, String from, String to,
       DiffReportEntry... entries) throws IOException {
@@ -157,10 +159,10 @@ public class TestSnapshotDiffReport {
         .getSnapshotDiffReport(dir, to, from);
     System.out.println(report.toString());
     System.out.println(inverseReport.toString() + "\n");
-    
+
     assertEquals(entries.length, report.getDiffList().size());
     assertEquals(entries.length, inverseReport.getDiffList().size());
-    
+
     for (DiffReportEntry entry : entries) {
       if (entry.getType() == DiffType.MODIFY) {
         assertTrue(report.getDiffList().contains(entry));
@@ -176,7 +178,17 @@ public class TestSnapshotDiffReport {
       }
     }
   }
-  
+
+  /** just simply make diff report */
+  private void callDiffReport(Path dir, String from, String to) throws IOException {
+    long start = Time.monotonicNow();
+    SnapshotDiffReport report = hdfs.getSnapshotDiffReport(dir, from, to);
+    long diff = Time.monotonicNow() - start;
+    System.out.println(
+        String.format("getSnapshotDiffReport took %d ms and contain %d diff",
+            diff, report.getDiffList().size()));
+  }
+
   /** Test the computation and representation of diff between snapshots */
   @Test (timeout=60000)
   public void testDiffReport() throws Exception {
@@ -187,7 +199,7 @@ public class TestSnapshotDiffReport {
     hdfs.mkdirs(subsubsub1);
     modifyAndCreateSnapshot(sub1, new Path[]{sub1, subsubsub1});
     modifyAndCreateSnapshot(subsubsub1, new Path[]{sub1, subsubsub1});
-    
+
     try {
       hdfs.getSnapshotDiffReport(subsub1, "s1", "s2");
       fail("Expect exception when getting snapshot diff report: " + subsub1
@@ -196,7 +208,7 @@ public class TestSnapshotDiffReport {
       GenericTestUtils.assertExceptionContains(
           "Directory is not a snapshottable directory: " + subsub1, e);
     }
-    
+
     final String invalidName = "invalid";
     try {
       hdfs.getSnapshotDiffReport(sub1, invalidName, invalidName);
@@ -206,16 +218,16 @@ public class TestSnapshotDiffReport {
           "Cannot find the snapshot of directory " + sub1 + " with name "
               + invalidName, e);
     }
-    
+
     // diff between the same snapshot
     SnapshotDiffReport report = hdfs.getSnapshotDiffReport(sub1, "s0", "s0");
     System.out.println(report);
     assertEquals(0, report.getDiffList().size());
-    
+
     report = hdfs.getSnapshotDiffReport(sub1, "", "");
     System.out.println(report);
     assertEquals(0, report.getDiffList().size());
-    
+
     report = hdfs.getSnapshotDiffReport(subsubsub1, "s0", "s2");
     System.out.println(report);
     assertEquals(0, report.getDiffList().size());
@@ -225,7 +237,7 @@ public class TestSnapshotDiffReport {
     System.out.println(report);
     assertEquals(0, report.getDiffList().size());
 
-    verifyDiffReport(sub1, "s0", "s2", 
+    verifyDiffReport(sub1, "s0", "s2",
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
         new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
         new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
@@ -235,7 +247,7 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("link13")),
         new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("link13")));
 
-    verifyDiffReport(sub1, "s0", "s5", 
+    verifyDiffReport(sub1, "s0", "s5",
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
         new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
         new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
@@ -257,7 +269,7 @@ public class TestSnapshotDiffReport {
             DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
         new DiffReportEntry(DiffType.CREATE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
-    
+
     verifyDiffReport(sub1, "s2", "s5",
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file10")),
         new DiffReportEntry(DiffType.MODIFY,
@@ -272,7 +284,7 @@ public class TestSnapshotDiffReport {
             DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
         new DiffReportEntry(DiffType.CREATE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
-    
+
     verifyDiffReport(sub1, "s3", "",
         new DiffReportEntry(DiffType.MODIFY,
             DFSUtil.string2Bytes("subsub1/subsubsub1")),
@@ -293,7 +305,7 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.DELETE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/link13")));
   }
-  
+
   /**
    * Make changes under a sub-directory, then delete the sub-directory. Make
    * sure the diff report computation correctly retrieve the diff from the
@@ -305,14 +317,14 @@ public class TestSnapshotDiffReport {
     Path subsubsub1 = new Path(subsub1, "subsubsub1");
     hdfs.mkdirs(subsubsub1);
     modifyAndCreateSnapshot(subsubsub1, new Path[]{sub1});
-    
+
     // delete subsub1
     hdfs.delete(subsub1, true);
     // check diff report between s0 and s2
-    verifyDiffReport(sub1, "s0", "s2", 
+    verifyDiffReport(sub1, "s0", "s2",
         new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1")), 
-        new DiffReportEntry(DiffType.CREATE, 
+            DFSUtil.string2Bytes("subsub1/subsubsub1")),
+        new DiffReportEntry(DiffType.CREATE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/file15")),
         new DiffReportEntry(DiffType.DELETE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/file12")),
@@ -327,7 +339,7 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.DELETE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/link13")));
     // check diff report between s0 and the current status
-    verifyDiffReport(sub1, "s0", "", 
+    verifyDiffReport(sub1, "s0", "",
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
         new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("subsub1")));
   }
@@ -528,5 +540,43 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("foo2")),
         new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("foo2/bar"),
             DFSUtil.string2Bytes("foo2/bar-new")));
+  }
+
+  /**
+   * Rename a directory to its prior descendant, and verify the diff report.
+   */
+  @Test (timeout=120000)
+  public void testDiffReportWithLargeRename() throws Exception {
+    final int maxdepth = 79; //75
+    final int numDir = 8384;
+    final String subdir1 = String.format("subdir%093d", 1);
+    final String subdir2 = String.format("subdir%093d", 2);
+    final String format1 = "leafdir%091d";
+    final String format2 = "leafdir%091d";
+    final Path root = new Path("/");
+    final Path dir1 = new Path(StringUtils.repeat("/" + subdir1, maxdepth));
+    final Path dir2 = new Path(StringUtils.repeat("/" + subdir2, maxdepth));
+
+    // create initial subdirs
+    for (int i=0; i< numDir; i++) {
+      Path subDir = new Path(dir1, String.format(format1, i));
+      hdfs.mkdirs(subDir);
+    }
+    hdfs.mkdirs(dir2);
+
+    // create snapshot on root
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
+
+    // rename dirs subdirs
+    for (int i=0; i< numDir; i++) {
+      Path from = new Path(dir1, String.format(format1, i));
+      Path to = new Path(dir2, String.format(format2, i));
+      hdfs.rename(from, to);
+    }
+
+    // snapshot again
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s2");
+
+    callDiffReport(root, "s1", "s2");
   }
 }
