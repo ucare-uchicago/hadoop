@@ -583,18 +583,26 @@ public class TestSnapshotDiffReport {
   /**
    * Create many directories and measure its diff time
    */
-  @Test (timeout=120000)
+  @Test
   public void testDiffReportWithMillionCreate() throws Exception {
-    final int numL1 = 10;
-    final int numL2 = 10;
+    final int numL1 = 1;
+    final int numL2 = 1000;
+    final int numL3 = 1000;
     final Path root = new Path("/");
-    final String subdirPattern = "%04d";
-    final String leafPattern = "L%04d";
+    final Path tdir = new Path(root, "tdir");
+    final String subdirPattern = "%03d";
+    final String leafPattern = "L%03d";
 
     // create initial subdirs
     for (int i=0; i<numL1; i++) {
-      Path subDir = new Path(root, String.format(subdirPattern, i));
-      hdfs.mkdirs(subDir);
+      Path subDir = new Path(tdir, String.format(subdirPattern, i));
+      for (int j=0; j<numL2; j++) {
+        Path subsubDir = new Path(subDir, String.format(subdirPattern, j));
+        for (int k=0; k<numL3; k++) {
+          Path subsubsubDir = new Path(subsubDir, String.format(subdirPattern, k));
+          hdfs.mkdirs(subsubsubDir);
+        }
+      }
     }
 
     // create snapshot on root
@@ -602,15 +610,21 @@ public class TestSnapshotDiffReport {
 
     // create new subdirs
     for (int i=0; i<numL1; i++) {
-      Path subDir = new Path(root, String.format(subdirPattern, i));
+      Path subDir = new Path(tdir, String.format(subdirPattern, i));
       for (int j=0; j<numL2; j++) {
-        Path subsubDir = new Path(subDir, String.format(leafPattern, j));
-        hdfs.mkdirs(subsubDir);
+        Path subsubDir = new Path(subDir, String.format(subdirPattern, j));
+        for (int k=0; k<numL3; k++) {
+          Path subsubsubDir = new Path(subsubDir, String.format(subdirPattern, k));
+          Path leafDir = new Path(subsubsubDir, String.format(leafPattern, k));
+          hdfs.mkdirs(leafDir);
+        }
       }
     }
 
     // snapshot again
     SnapshotTestHelper.createSnapshot(hdfs, root, "s2");
+    // let's delete /dir2 to make things more complicated
+    hdfs.delete(tdir, true);
 
     callDiffReport(root, "s1", "s2");
   }
