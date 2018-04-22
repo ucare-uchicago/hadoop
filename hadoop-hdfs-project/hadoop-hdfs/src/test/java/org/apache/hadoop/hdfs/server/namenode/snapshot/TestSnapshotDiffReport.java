@@ -543,7 +543,7 @@ public class TestSnapshotDiffReport {
   }
 
   /**
-   * Rename a directory to its prior descendant, and verify the diff report.
+   * Rename a directory to its prior descendant, and measure its time.
    */
   @Test (timeout=120000)
   public void testDiffReportWithLargeRename() throws Exception {
@@ -572,6 +572,41 @@ public class TestSnapshotDiffReport {
       Path from = new Path(dir1, String.format(format1, i));
       Path to = new Path(dir2, String.format(format2, i));
       hdfs.rename(from, to);
+    }
+
+    // snapshot again
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s2");
+
+    callDiffReport(root, "s1", "s2");
+  }
+
+  /**
+   * Create many directories and measure its diff time
+   */
+  @Test (timeout=120000)
+  public void testDiffReportWithMillionCreate() throws Exception {
+    final int numL1 = 10;
+    final int numL2 = 10;
+    final Path root = new Path("/");
+    final String subdirPattern = "%04d";
+    final String leafPattern = "L%04d";
+
+    // create initial subdirs
+    for (int i=0; i<numL1; i++) {
+      Path subDir = new Path(root, String.format(subdirPattern, i));
+      hdfs.mkdirs(subDir);
+    }
+
+    // create snapshot on root
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
+
+    // create new subdirs
+    for (int i=0; i<numL1; i++) {
+      Path subDir = new Path(root, String.format(subdirPattern, i));
+      for (int j=0; j<numL2; j++) {
+        Path subsubDir = new Path(subDir, String.format(leafPattern, j));
+        hdfs.mkdirs(subsubDir);
+      }
     }
 
     // snapshot again
