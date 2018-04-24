@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# set max heap size 16GB
-export HADOOP_HEAPSIZE=16384
+rm -rf build
+
+# set max heap size 64GB
+export HADOOP_HEAPSIZE=65536
 hadoop org.apache.hadoop.hdfs.server.namenode.snapshot.TestSnapshotDiffReportScale > output.txt 2>&1 
 

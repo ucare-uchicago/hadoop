@@ -1,7 +1,8 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
@@ -29,12 +30,15 @@ public class TestSnapshotDiffReportScale {
 
   public void setUp() throws Exception {
     conf = new Configuration();
-    conf.setInt(IPC_MAXIMUM_DATA_LENGTH, 512 * 1024 * 1024);
+    conf.setInt(IPC_MAXIMUM_RESPONSE_LENGTH, 512 * 1024 * 1024);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
         .format(true).build();
     cluster.waitActive();
     hdfs = cluster.getFileSystem();
-    LOG.info("MiniDFSCluster started with following conf\n" + conf.toString());
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    conf.writeXml(baos);
+    LOG.info("MiniDFSCluster started with following conf\n" + baos.toString());
   }
 
   public void tearDown() {
