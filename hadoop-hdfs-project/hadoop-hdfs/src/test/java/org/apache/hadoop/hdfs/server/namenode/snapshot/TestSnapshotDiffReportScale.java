@@ -44,26 +44,38 @@ public class TestSnapshotDiffReportScale {
 
   /** just simply make diff report */
   private void callDiffReport(Path dir, String from, String to) throws IOException {
+    LOG.info("diff calculation between " + from + " and " + to + " start.");
     long start = Time.monotonicNow();
     SnapshotDiffReport report = hdfs.getSnapshotDiffReport(dir, from, to);
     long diff = Time.monotonicNow() - start;
+    LOG.info("diff calculation between " + from + " and " + to + " finish.");
     // System.out.println(report);
-    LOG.info(
-        String.format("getSnapshotDiffReport took %d ms and contain %d diff",
-            diff, report.getDiffList().size()));
+    LOG.info(String.format(
+        "getSnapshotDiffReport between " + from + " and " + to
+            + " took %d ms and contain %d diff",
+        diff, report.getDiffList().size()));
+  }
+  
+  private void makeSnapshot(DistributedFileSystem hdfs,
+      Path snapshotRoot, String snapshotName) throws Exception {
+    LOG.info("making of snapshot " + snapshotName + " start.");
+    long start = Time.monotonicNow();
+    SnapshotTestHelper.createSnapshot(hdfs, snapshotRoot, snapshotName);
+    long diff = Time.monotonicNow() - start;
+    LOG.info("making of snapshot " + snapshotName + " finish.");
+    LOG.info("snapshot " + snapshotName + " creation took " + diff + " ms");
   }
 
   /**
    * Create many directories and measure its diff time
    */
   public void testDiffReportWithMillionCreate() throws Exception {
-    final int numL1 = 20;
+    final int numL1 = 17;
     final int numL2 = 1000;
     final int numL3 = 1000;
     final Path root = new Path("/");
     final Path tdir = new Path(root, "td");
     final String subdirPattern = "%03d";
-    final String leafPattern = "L%03d";
 
     // create initial subdirs
     for (int i=0; i<numL1; i++) {
@@ -74,13 +86,18 @@ public class TestSnapshotDiffReportScale {
           Path subsubsubDir = new Path(subsubDir, String.format(subdirPattern, k));
           hdfs.mkdirs(subsubsubDir);
         }
-	LOG.info("Path " + subsubDir + " created");
+        LOG.info("Path " + subsubDir + " created");
       }
     }
 
-    // create snapshot on root
-    SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
+    // create initial snapshot on root
+    String intialSnapshot = "s0";
+    makeSnapshot(hdfs, root, intialSnapshot);
 
+    int n = 1;
+    long nextSnapshot = (long) Math.pow(2, n);
+    long ct = 0;
+    
     // change subdirs permission
     for (int i=0; i<numL1; i++) {
       Path subDir = new Path(tdir, String.format(subdirPattern, i));
@@ -90,17 +107,21 @@ public class TestSnapshotDiffReportScale {
           Path subsubsubDir = new Path(subsubDir, String.format(subdirPattern, k));
           FsPermission perm = new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.READ);
           hdfs.setPermission(subsubsubDir, perm);
+          ct++;
+          
+          if (ct == nextSnapshot) {
+            // create snapshot n
+            String snapshotName = "s"+n;
+            makeSnapshot(hdfs, root, snapshotName);
+            
+            // measure diff time
+            callDiffReport(root, intialSnapshot, snapshotName);
+            nextSnapshot = (long) Math.pow(2, ++n);
+          }
         }
         LOG.info("Path " + subsubDir + " updated");
       }
     }
-
-    // snapshot again
-    SnapshotTestHelper.createSnapshot(hdfs, root, "s2");
-    // let's delete /dir2 to make things more complicated
-    hdfs.delete(tdir, true);
-
-    callDiffReport(root, "s1", "s2");
   }
 
   public static void main(String[] args) {
