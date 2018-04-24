@@ -6,6 +6,7 @@ import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -29,6 +30,8 @@ public class TestSnapshotDiffReportScale {
 
   public void setUp() throws Exception {
     conf = new Configuration();
+    long ipc_max_length = 512 * 1024 * 1024;
+    conf.set(CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH, String.valueOf(ipc_max_length));
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
         .format(true).build();
     cluster.waitActive();
@@ -82,10 +85,7 @@ public class TestSnapshotDiffReportScale {
       Path subDir = new Path(tdir, String.format(subdirPattern, i));
       for (int j=0; j<numL2; j++) {
         Path subsubDir = new Path(subDir, String.format(subdirPattern, j));
-        for (int k=0; k<numL3; k++) {
-          Path subsubsubDir = new Path(subsubDir, String.format(subdirPattern, k));
-          hdfs.mkdirs(subsubsubDir);
-        }
+        hdfs.mkdirs(subsubDir);
         LOG.info("Path " + subsubDir + " created");
       }
     }
@@ -105,8 +105,7 @@ public class TestSnapshotDiffReportScale {
         Path subsubDir = new Path(subDir, String.format(subdirPattern, j));
         for (int k=0; k<numL3; k++) {
           Path subsubsubDir = new Path(subsubDir, String.format(subdirPattern, k));
-          FsPermission perm = new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.READ);
-          hdfs.setPermission(subsubsubDir, perm);
+          hdfs.mkdirs(subsubsubDir);
           ct++;
           
           if (ct == nextSnapshot) {
