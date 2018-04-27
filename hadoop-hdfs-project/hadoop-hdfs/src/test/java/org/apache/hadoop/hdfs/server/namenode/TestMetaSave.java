@@ -27,6 +27,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -69,6 +71,10 @@ public class TestMetaSave {
     stm.close();
   }
 
+  private void increaseReplica(String path) throws Exception {
+    nnRpc.setReplication(path, (short) 4);
+  }
+
   @BeforeClass
   public static void setUp() throws IOException {
     // start a cluster
@@ -76,7 +82,7 @@ public class TestMetaSave {
 
     // High value of replication interval
     // so that blocks remain under-replicated
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1000);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 7200);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1L);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
@@ -205,25 +211,75 @@ public class TestMetaSave {
     }
   }
 
+  class FileCreateTask implements Runnable {
+    private Path file;
+
+    public FileCreateTask(Path file) {
+      this.file = file;
+    }
+
+    @Override
+    public void run() {
+      try {
+        createFile(fileSys, file);
+      } catch (IOException e) {
+        LOG.error("Failed to create file " + file);
+      }
+    }
+
+  }
+
+  class IncreaseReplicationTask implements Runnable {
+    private String file;
+
+    public IncreaseReplicationTask(String file) {
+      this.file = file;
+    }
+
+    @Override
+    public void run() {
+      try {
+        increaseReplica(file);
+      } catch (Exception e) {
+        LOG.error("Failed to increase replication of file " + file);
+      }
+    }
+
+  }
+
   /**
    * Tests metasave performance when there are many under replicated blocks
    */
   @Test
   public void testMetaSaveWithLargeUnderReplicate() throws Exception {
-    int numFile = 1000;
-    for (int i = 0; i < numFile; i++) {
-      Path file = new Path("/filestatus" + i);
-      createFile(fileSys, file);
+    long maxNumFile = 16384;
+    int maxPool = 100;
+    ExecutorService pool = Executors.newFixedThreadPool(maxPool);
+
+    long exponent = 1;
+    long begin = 0;
+    long end = (long) Math.pow(2, exponent);
+    while (end < maxNumFile) {
+      for (long i = begin; i < end; i++) {
+        Path file = new Path("/file" + i);
+        pool.submit(new FileCreateTask(file));
+      }
+
+      for (long i = begin; i < end; i++) {
+        pool.submit(new IncreaseReplicationTask("/file" + i));
+      }
+
+      long start = Time.monotonicNow();
+      nnRpc.metaSave("metasave-" + end + ".out.txt");
+      long elapsed = Time.monotonicNow() - start;
+      LOG.info("metaSave elapsed time for " + end + " files is " + elapsed + " ms");
+
+      exponent++;
+      begin = end;
+      end = Math.min(maxNumFile, (long) Math.pow(2, exponent));
     }
 
-    for (int i = 0; i < numFile; i++) {
-      nnRpc.setReplication("/filestatus" + i, (short) 4);
-    }
-
-    long start = Time.monotonicNow();
-    nnRpc.metaSave("metaSaveLarge.out.txt");
-    long elapsed = Time.monotonicNow() - start;
-    LOG.info("metaSave elapsed time for " + numFile + " files is " + elapsed + " ms");
+    pool.shutdown();
   }
 
   @AfterClass
