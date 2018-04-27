@@ -1,0 +1,13 @@
+
+
+# SDLoop: class=org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter, method=dumpSnapshotDiffSection, lineNumber=317
+org.apache.hadoop.hdfs.tools.offlineImageViewer.TestOfflineImageViewer#testPBImageXmlWriter
+
+# SDLoop: class=org.apache.hadoop.hdfs.server.namenode.FSNamesystem, method=getVolumeFailuresTotal, lineNumber=6090
+org.apache.hadoop.hdfs.server.datanode.TestDataNodeVolumeFailureReporting#testSuccessiveVolumeFailures
+
+# SDLoop: class=org.apache.hadoop.hdfs.server.namenode.FSNamesystem, method=getNumDecomLiveDataNodes, lineNumber=6068
+org.apache.hadoop.hdfs.TestDecommission#testDecommission
+
+# SDLoop: class=org.apache.hadoop.hdfs.server.namenode.FSNamesystem, method=getLiveNodes, lineNumber=6956
+org.apache.hadoop.hdfs.server.namenode.TestNameNodeMXBean#testNameNodeMXBeanInfo() 

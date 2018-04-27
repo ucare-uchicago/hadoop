@@ -90,7 +90,7 @@
     <enforced.maven.version>[3.0.2,)</enforced.maven.version>
 
     <!-- Plugin versions and config -->
-    <maven-surefire-plugin.argLine>-Xmx4096m -XX:MaxPermSize=768m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
+    <maven-surefire-plugin.argLine>${env.HADOOP_OPTS} -Xmx4096m -XX:MaxPermSize=768m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
     <maven-surefire-plugin.version>2.17</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
@@ -1134,6 +1134,11 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <additionalClasspathElements>
+            <additionalClasspathElement>/home/cc/SFieldAgent/sbin/SFieldAgent.jar</additionalClasspathElement>
+            <additionalClasspathElement>/home/cc/SFieldAgent/resources/aspectJ/*</additionalClasspathElement>
+            <additionalClasspathElement>/home/cc/SFieldAgent/scripts/meta/META.jar</additionalClasspathElement>
+          </additionalClasspathElements>
           <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
           <argLine>${maven-surefire-plugin.argLine}</argLine>
