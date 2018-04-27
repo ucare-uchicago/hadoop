@@ -31,6 +31,8 @@ import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
 import com.google.common.base.Supplier;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -40,6 +42,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -53,6 +56,8 @@ import org.junit.Test;
  * This class tests the creation and validation of metasave
  */
 public class TestMetaSave {
+  public static final Log LOG = LogFactory.getLog(TestMetaSave.class);
+
   static final int NUM_DATA_NODES = 2;
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
@@ -224,6 +229,27 @@ public class TestMetaSave {
     }
   }
 
+  /**
+   * Tests metasave performance when there are many under replicated blocks
+   */
+  @Test
+  public void testMetaSaveWithLargeUnderReplicate() throws Exception {
+    int numFile = 1000;
+    for (int i = 0; i < numFile; i++) {
+      Path file = new Path("/filestatus" + i);
+      createFile(fileSys, file);
+    }
+
+    for (int i = 0; i < numFile; i++) {
+      nnRpc.setReplication("/filestatus" + i, (short) 4);
+    }
+
+    long start = Time.monotonicNow();
+    nnRpc.metaSave("metaSaveLarge.out.txt");
+    long elapsed = Time.monotonicNow() - start;
+    LOG.info("metaSave elapsed time for " + numFile + " files is " + elapsed + " ms");
+  }
+
   @After
   public void tearDown() throws IOException {
     if (fileSys != null)
@@ -234,7 +260,7 @@ public class TestMetaSave {
 
   /**
    * Returns a File for the given name inside the log directory.
-   * 
+   *
    * @param name String file name
    * @return File for given name inside log directory
    */
