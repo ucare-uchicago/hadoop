@@ -225,9 +225,10 @@ public class TestMetaSave {
     public void run() {
       try {
         createFile(fileSys, file);
-        latch.countDown();
       } catch (IOException e) {
         LOG.error("Failed to create file " + file);
+      } finally {
+        latch.countDown();
       }
     }
 
@@ -246,9 +247,10 @@ public class TestMetaSave {
     public void run() {
       try {
         increaseReplica(file);
-        latch.countDown();
       } catch (Exception e) {
         LOG.error("Failed to increase replication of file " + file);
+      } finally {
+        latch.countDown();
       }
     }
 
@@ -267,7 +269,7 @@ public class TestMetaSave {
     long exponent = 1;
     long begin = 0;
     long end = (long) Math.pow(2, exponent);
-    while (end < maxNumFile) {
+    while (end <= maxNumFile) {
       int totalFile = (int) (end - begin);
       latch = new CountDownLatch(totalFile);
       for (long i = begin; i < end; i++) {
@@ -297,7 +299,7 @@ public class TestMetaSave {
 
       exponent++;
       begin = end;
-      end = Math.min(maxNumFile, (long) Math.pow(2, exponent));
+      end = Math.min(maxNumFile+1, (long) Math.pow(2, exponent));
     }
 
     pool.shutdown();
