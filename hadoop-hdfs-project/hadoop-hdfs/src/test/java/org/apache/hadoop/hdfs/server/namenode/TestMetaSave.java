@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
@@ -62,12 +63,13 @@ import org.junit.Test;
 public class TestMetaSave {
   public static final Log LOG = LogFactory.getLog(TestMetaSave.class);
 
-  static final int NUM_DATA_NODES = 2;
+  static final int NUM_DATA_NODES = 3;
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 1024;
   private static MiniDFSCluster cluster = null;
   private static FileSystem fileSys = null;
   private static NamenodeProtocols nnRpc = null;
+  private static BlockManager bm = null;
 
   private void createFile(FileSystem fileSys, Path name) throws IOException {
     FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
@@ -81,7 +83,7 @@ public class TestMetaSave {
   }
 
   private void increaseReplica(String path) throws Exception {
-    nnRpc.setReplication(path, (short) 4);
+    nnRpc.setReplication(path, (short) 3);
   }
 
   @Before
@@ -99,6 +101,7 @@ public class TestMetaSave {
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
     nnRpc = cluster.getNameNodeRpc();
+    bm = cluster.getNameNode().getNamesystem().getBlockManager();
   }
 
   /**
@@ -293,12 +296,12 @@ public class TestMetaSave {
    */
   @Test
   public void testMetaSaveWithLargeUnderReplicate() throws Exception {
-    int maxNumFile = 16384;
+    int maxNumFile = 131072;
     int maxPool = 100;
     ExecutorService pool = Executors.newFixedThreadPool(maxPool);
     CountDownLatch latch;
 
-    int exponent = 1;
+    int exponent = 17;
     int begin = 0;
     int end = (int) Math.pow(2, exponent);
     while (end <= maxNumFile) {
@@ -323,6 +326,11 @@ public class TestMetaSave {
       } catch (InterruptedException E) {
          LOG.error("File replication increment interrupted");
       }
+
+      long bmStart = Time.monotonicNow();
+      BlockManagerTestUtil.computeAllPendingWork(bm);
+      long bmElapsed = Time.monotonicNow() - bmStart;
+      LOG.info("BlockManagerTestUtil.computeAllPendingWork took " + bmElapsed + " ms");
 
       long start = Time.monotonicNow();
       nnRpc.metaSave("metasave-" + end + ".out.txt");
