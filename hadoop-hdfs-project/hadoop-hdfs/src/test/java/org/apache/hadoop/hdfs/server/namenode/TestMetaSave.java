@@ -57,9 +57,10 @@ import org.junit.Test;
 public class TestMetaSave {
   public static final Log LOG = LogFactory.getLog(TestMetaSave.class);
 
-  static final int NUM_DATA_NODES = 3;
+  static final int NUM_DATA_NODES = 4;
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 1024;
+  static final int maxNumFile = 1048576;
   private static MiniDFSCluster cluster = null;
   private static FileSystem fileSys = null;
   private static NamenodeProtocols nnRpc = null;
@@ -77,7 +78,7 @@ public class TestMetaSave {
   }
 
   private void increaseReplica(String path) throws Exception {
-    nnRpc.setReplication(path, (short) 3);
+    nnRpc.setReplication(path, (short) 2);
   }
 
   @BeforeClass
@@ -90,6 +91,11 @@ public class TestMetaSave {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 7200);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1L);
+    // set high stream value
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION, maxNumFile);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, maxNumFile);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY, maxNumFile);
+
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
@@ -229,7 +235,7 @@ public class TestMetaSave {
     @Override
     public void run() {
       try {
-        DFSTestUtil.createFile(fileSys, file, blockSize, (short) 2, seed);
+        DFSTestUtil.createFile(fileSys, file, blockSize, (short) 1, seed);
       } catch (IOException e) {
         LOG.error("Failed to create file " + file);
       } finally {
@@ -273,12 +279,11 @@ public class TestMetaSave {
    */
   @Test
   public void testMetaSaveWithLargeUnderReplicate() throws Exception {
-    int maxNumFile = 131072;
-    int maxPool = 100;
+    int maxPool = NUM_DATA_NODES * 4;
     ExecutorService pool = Executors.newFixedThreadPool(maxPool);
     CountDownLatch latch;
 
-    int exponent = 17;
+    int exponent = 1;
     int begin = 0;
     int end = (int) Math.pow(2, exponent);
     while (end <= maxNumFile) {
@@ -304,10 +309,10 @@ public class TestMetaSave {
          LOG.error("File replication increment interrupted");
       }
 
-      long bmStart = Time.monotonicNow();
-      BlockManagerTestUtil.computeAllPendingWork(bm);
-      long bmElapsed = Time.monotonicNow() - bmStart;
-      LOG.info("BlockManagerTestUtil.computeAllPendingWork took " + bmElapsed + " ms");
+      //long bmStart = Time.monotonicNow();
+      //BlockManagerTestUtil.computeAllPendingWork(bm);
+      //long bmElapsed = Time.monotonicNow() - bmStart;
+      //LOG.info("BlockManagerTestUtil.computeAllPendingWork took " + bmElapsed + " ms");
 
       long start = Time.monotonicNow();
       nnRpc.metaSave("metasave-" + end + ".out.txt");
