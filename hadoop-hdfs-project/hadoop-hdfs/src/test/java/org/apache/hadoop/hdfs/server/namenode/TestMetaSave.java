@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.AfterClass;
@@ -56,7 +57,7 @@ public class TestMetaSave {
 
   static final int NUM_DATA_NODES = 2;
   static final long seed = 0xDEADBEEFL;
-  static final int blockSize = 8192;
+  static final int blockSize = 1024;
   private static MiniDFSCluster cluster = null;
   private static FileSystem fileSys = null;
   private static NamenodeProtocols nnRpc = null;
@@ -224,7 +225,7 @@ public class TestMetaSave {
     @Override
     public void run() {
       try {
-        createFile(fileSys, file);
+        DFSTestUtil.createFile(fileSys, file, blockSize, (short) 2, seed);
       } catch (IOException e) {
         LOG.error("Failed to create file " + file);
       } finally {
@@ -256,24 +257,31 @@ public class TestMetaSave {
 
   }
 
+  public String toPath(int numFile) {
+    int fileNum = numFile;
+    int subsubdir = (numFile / 1000) % 1000;
+    int subdir = (numFile / 1000000);
+    return String.format("/test/%d/%d/file-%d", subdir, subsubdir, fileNum);
+  }
+
   /**
    * Tests metasave performance when there are many under replicated blocks
    */
   @Test
   public void testMetaSaveWithLargeUnderReplicate() throws Exception {
-    long maxNumFile = 16384;
+    int maxNumFile = 16384;
     int maxPool = 100;
     ExecutorService pool = Executors.newFixedThreadPool(maxPool);
     CountDownLatch latch;
 
-    long exponent = 1;
-    long begin = 0;
-    long end = (long) Math.pow(2, exponent);
+    int exponent = 1;
+    int begin = 0;
+    int end = (int) Math.pow(2, exponent);
     while (end <= maxNumFile) {
-      int totalFile = (int) (end - begin);
+      int totalFile = (end - begin);
       latch = new CountDownLatch(totalFile);
-      for (long i = begin; i < end; i++) {
-        Path file = new Path("/file" + i);
+      for (int i = begin; i < end; i++) {
+        Path file = new Path(toPath(i));
         pool.submit(new FileCreateTask(file, latch));
       }
       try {
@@ -283,8 +291,8 @@ public class TestMetaSave {
       }
 
       latch = new CountDownLatch(totalFile);
-      for (long i = begin; i < end; i++) {
-        pool.submit(new IncreaseReplicationTask("/file" + i, latch));
+      for (int i = begin; i < end; i++) {
+        pool.submit(new IncreaseReplicationTask(toPath(i), latch));
       }
       try {
         latch.await();
@@ -299,7 +307,7 @@ public class TestMetaSave {
 
       exponent++;
       begin = end;
-      end = Math.min(maxNumFile+1, (long) Math.pow(2, exponent));
+      end = Math.min(maxNumFile+1, (int) Math.pow(2, exponent));
     }
 
     pool.shutdown();
