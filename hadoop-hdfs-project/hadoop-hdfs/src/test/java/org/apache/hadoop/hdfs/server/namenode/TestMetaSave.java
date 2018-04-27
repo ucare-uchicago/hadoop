@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -237,15 +238,18 @@ public class TestMetaSave {
 
   class FileCreateTask implements Runnable {
     private Path file;
+    private CountDownLatch latch;
 
-    public FileCreateTask(Path file) {
+    public FileCreateTask(Path file, CountDownLatch latch) {
       this.file = file;
+      this.latch = latch;
     }
 
     @Override
     public void run() {
       try {
         createFile(fileSys, file);
+        latch.countDown();
       } catch (IOException e) {
         LOG.error("Failed to create file " + file);
       }
@@ -255,15 +259,18 @@ public class TestMetaSave {
 
   class IncreaseReplicationTask implements Runnable {
     private String file;
+    CountDownLatch latch;
 
-    public IncreaseReplicationTask(String file) {
+    public IncreaseReplicationTask(String file, CountDownLatch latch) {
       this.file = file;
+      this.latch = latch;
     }
 
     @Override
     public void run() {
       try {
         increaseReplica(file);
+        latch.countDown();
       } catch (Exception e) {
         LOG.error("Failed to increase replication of file " + file);
       }
@@ -279,18 +286,32 @@ public class TestMetaSave {
     long maxNumFile = 16384;
     int maxPool = 100;
     ExecutorService pool = Executors.newFixedThreadPool(maxPool);
+    CountDownLatch latch;
 
     long exponent = 1;
     long begin = 0;
     long end = (long) Math.pow(2, exponent);
     while (end < maxNumFile) {
+      int totalFile = (int) (end - begin);
+      latch = new CountDownLatch(totalFile);
       for (long i = begin; i < end; i++) {
         Path file = new Path("/file" + i);
-        pool.submit(new FileCreateTask(file));
+        pool.submit(new FileCreateTask(file, latch));
+      }
+      try {
+        latch.await();
+      } catch (InterruptedException E) {
+         LOG.error("File creation interrupted");
       }
 
+      latch = new CountDownLatch(totalFile);
       for (long i = begin; i < end; i++) {
-        pool.submit(new IncreaseReplicationTask("/file" + i));
+        pool.submit(new IncreaseReplicationTask("/file" + i, latch));
+      }
+      try {
+        latch.await();
+      } catch (InterruptedException E) {
+         LOG.error("File replication increment interrupted");
       }
 
       long start = Time.monotonicNow();
