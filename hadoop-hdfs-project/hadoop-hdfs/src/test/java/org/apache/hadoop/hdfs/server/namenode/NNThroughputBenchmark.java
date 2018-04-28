@@ -609,6 +609,99 @@ public class NNThroughputBenchmark implements Tool {
   }
 
   /**
+   * SaveMeta statistic
+  *
+  * Each thread creates the same (+ or -1) number of files.
+  * File names are pre-generated during initialization.
+  * The created files do not have blocks.
+  */
+ class SaveMetaStats extends CreateFileStats {
+   // Operation types
+   static final String OP_SAVEMETA_NAME = "savemeta";
+   static final String OP_SAVEMETA_USAGE =
+     "-op savemeta [-threads T] [-files N] [-filesPerDir P]";
+
+   private boolean closeUponCreate;
+   private long saveMetaTime;
+
+   SaveMetaStats(List<String> args) {
+     super(args);
+
+     // constants
+     closeUponCreate = true;
+     replication = 1;
+   }
+
+   @Override
+   String getOpName() {
+     return OP_SAVEMETA_NAME;
+   }
+
+   @Override
+   void parseArguments(List<String> args) {
+     boolean ignoreUnrelatedOptions = verifyOpArgument(args);
+     int nrFilesPerDir = 4;
+     closeUponCreate = false;
+     for (int i = 2; i < args.size(); i++) {       // parse command line
+       if(args.get(i).equals("-files")) {
+         if(i+1 == args.size())  printUsage();
+         numOpsRequired = Integer.parseInt(args.get(++i));
+       } else if(args.get(i).equals("-threads")) {
+         if(i+1 == args.size())  printUsage();
+         numThreads = Integer.parseInt(args.get(++i));
+       } else if(args.get(i).equals("-filesPerDir")) {
+         if(i+1 == args.size())  printUsage();
+         nrFilesPerDir = Integer.parseInt(args.get(++i));
+       } else if(!ignoreUnrelatedOptions)
+         printUsage();
+     }
+     nameGenerator = new FileNameGenerator(getBaseDir(), nrFilesPerDir);
+   }
+
+   /**
+    * Do file create and increase replication immediately.
+    */
+   @Override
+   long executeOp(int daemonId, int inputIdx, String clientName)
+   throws IOException {
+     long start = Time.now();
+     // dummyActionNoSynch(fileIdx);
+     clientProto.create(fileNames[daemonId][inputIdx], FsPermission.getDefault(),
+                     clientName, new EnumSetWritable<CreateFlag>(EnumSet
+             .of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true,
+         replication, BLOCK_SIZE, CryptoProtocolVersion.supported());
+     long end = Time.now();
+     for(boolean written = !closeUponCreate; !written;
+       written = clientProto.complete(fileNames[daemonId][inputIdx],
+                                   clientName, null, HdfsConstants.GRANDFATHER_INODE_ID));
+     // change replication
+     clientProto.setReplication(fileNames[daemonId][inputIdx], (short) (replication+1));
+     return end-start;
+   }
+
+   @Override
+   void benchmark() throws IOException {
+     super.benchmark();
+
+     // do savemeta
+     long start = Time.monotonicNow();
+     clientProto.metaSave("metasave-" + numOpsRequired + ".txt");
+     long end = Time.monotonicNow();
+     saveMetaTime = end - start;
+   }
+
+   @Override
+   void printResults() {
+     LOG.info("--- " + getOpName() + " inputs ---");
+     LOG.info("nrFiles = " + numOpsRequired);
+     LOG.info("nrThreads = " + numThreads);
+     LOG.info("nrFilesPerDir = " + nameGenerator.getFilesPerDirectory());
+     LOG.info("saveMeta time = " + saveMetaTime);
+     printStats();
+   }
+ }
+
+  /**
    * Directory creation statistics.
    *
    * Each thread creates the same (+ or -1) number of directories.
@@ -1413,6 +1506,7 @@ public class NNThroughputBenchmark implements Tool {
         + " | \n\t" + BlockReportStats.OP_BLOCK_REPORT_USAGE
         + " | \n\t" + ReplicationStats.OP_REPLICATION_USAGE
         + " | \n\t" + CleanAllStats.OP_CLEAN_USAGE
+        + " | \n\t" + SaveMetaStats.OP_SAVEMETA_USAGE
         + " | \n\t" + GENERAL_OPTIONS_USAGE
     );
     System.err.println();
@@ -1493,6 +1587,10 @@ public class NNThroughputBenchmark implements Tool {
       }
       if(runAll || CleanAllStats.OP_CLEAN_NAME.equals(type)) {
         opStat = new CleanAllStats(args);
+        ops.add(opStat);
+      }
+      if(runAll || SaveMetaStats.OP_SAVEMETA_NAME.equals(type)) {
+        opStat = new SaveMetaStats(args);
         ops.add(opStat);
       }
       if (ops.isEmpty()) {
