@@ -610,96 +610,201 @@ public class NNThroughputBenchmark implements Tool {
 
   /**
    * SaveMeta statistic
-  *
-  * Each thread creates the same (+ or -1) number of files.
-  * File names are pre-generated during initialization.
-  * The created files do not have blocks.
-  */
- class SaveMetaStats extends CreateFileStats {
-   // Operation types
-   static final String OP_SAVEMETA_NAME = "savemeta";
-   static final String OP_SAVEMETA_USAGE =
-     "-op savemeta [-threads T] [-files N] [-filesPerDir P]";
+   *
+   * Each thread creates the same (+ or -1) number of files. File names are
+   * pre-generated during initialization. The created files do not have blocks.
+   */
+  class SaveMetaStats extends OperationStatsBase {
+    // Operation types
+    static final String OP_SAVEMETA_NAME = "savemeta";
+    static final String OP_SAVEMETA_USAGE =
+        "-op savemeta [-threads T] [-files N] [-filesPerDir P] [-numDatanode D]";
 
-   private boolean closeUponCreate;
-   private long saveMetaTime;
+    protected FileNameGenerator nameGenerator;
+    protected String[][] fileNames;
+    private long saveMetaTime;
+    private int nrDatanodes;
+    private int blocksPerFile;
+    private TinyDatanode[] datanodes; // array of data-nodes sorted by name
 
-   SaveMetaStats(List<String> args) {
-     super(args);
+    SaveMetaStats(List<String> args) {
+      parseArguments(args);
 
-     // constants
-     closeUponCreate = true;
-     replication = 1;
-   }
+      // config
+      config.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 3 * 60 * 60);
+      config.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 3 * 60 * 60);
 
-   @Override
-   String getOpName() {
-     return OP_SAVEMETA_NAME;
-   }
+      // constants
+      replication = 1;
+      blocksPerFile = 1;
+    }
 
-   @Override
-   void parseArguments(List<String> args) {
-     boolean ignoreUnrelatedOptions = verifyOpArgument(args);
-     int nrFilesPerDir = 4;
-     closeUponCreate = false;
-     for (int i = 2; i < args.size(); i++) {       // parse command line
-       if(args.get(i).equals("-files")) {
-         if(i+1 == args.size())  printUsage();
-         numOpsRequired = Integer.parseInt(args.get(++i));
-       } else if(args.get(i).equals("-threads")) {
-         if(i+1 == args.size())  printUsage();
-         numThreads = Integer.parseInt(args.get(++i));
-       } else if(args.get(i).equals("-filesPerDir")) {
-         if(i+1 == args.size())  printUsage();
-         nrFilesPerDir = Integer.parseInt(args.get(++i));
-       } else if(!ignoreUnrelatedOptions)
-         printUsage();
-     }
-     nameGenerator = new FileNameGenerator(getBaseDir(), nrFilesPerDir);
-   }
+    @Override
+    String getOpName() {
+      return OP_SAVEMETA_NAME;
+    }
 
-   /**
-    * Do file create and increase replication immediately.
-    */
-   @Override
-   long executeOp(int daemonId, int inputIdx, String clientName)
-   throws IOException {
-     long start = Time.now();
-     // dummyActionNoSynch(fileIdx);
-     clientProto.create(fileNames[daemonId][inputIdx], FsPermission.getDefault(),
-                     clientName, new EnumSetWritable<CreateFlag>(EnumSet
-             .of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true,
-         replication, BLOCK_SIZE, CryptoProtocolVersion.supported());
-     long end = Time.now();
-     for(boolean written = !closeUponCreate; !written;
-       written = clientProto.complete(fileNames[daemonId][inputIdx],
-                                   clientName, null, HdfsConstants.GRANDFATHER_INODE_ID));
-     // change replication
-     clientProto.setReplication(fileNames[daemonId][inputIdx], (short) (replication+1));
-     return end-start;
-   }
+    @Override
+    void parseArguments(List<String> args) {
+      boolean ignoreUnrelatedOptions = verifyOpArgument(args);
+      int nrFilesPerDir = 4;
+      for (int i = 2; i < args.size(); i++) {       // parse command line
+        if(args.get(i).equals("-files")) {
+          if(i+1 == args.size())  printUsage();
+          numOpsRequired = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-threads")) {
+          if(i+1 == args.size())  printUsage();
+          numThreads = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-filesPerDir")) {
+          if(i+1 == args.size())  printUsage();
+          nrFilesPerDir = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-numDatanode")) {
+          if(i+1 == args.size())  printUsage();
+          nrDatanodes = Integer.parseInt(args.get(++i));
+        }else if(!ignoreUnrelatedOptions)
+          printUsage();
+      }
+      nameGenerator = new FileNameGenerator(getBaseDir(), nrFilesPerDir);
+    }
 
-   @Override
-   void benchmark() throws IOException {
-     super.benchmark();
+    @Override
+    void generateInputs(int[] opsPerThread) throws IOException {
+      assert opsPerThread.length == numThreads : "Error opsPerThread.length";
 
-     // do savemeta
-     long start = Time.monotonicNow();
-     clientProto.metaSave("metasave-" + numOpsRequired + ".txt");
-     long end = Time.monotonicNow();
-     saveMetaTime = end - start;
-   }
+      datanodes = new TinyDatanode[nrDatanodes];
+      // create data-nodes
+      for(int idx=0; idx < nrDatanodes; idx++) {
+        datanodes[idx] = new TinyDatanode(idx, numOpsRequired);
+        datanodes[idx].register();
+        datanodes[idx].sendHeartbeat();
+      }
 
-   @Override
-   void printResults() {
-     LOG.info("--- " + getOpName() + " inputs ---");
-     LOG.info("nrFiles = " + numOpsRequired);
-     LOG.info("nrThreads = " + numThreads);
-     LOG.info("nrFilesPerDir = " + nameGenerator.getFilesPerDirectory());
-     LOG.info("saveMeta time = " + saveMetaTime);
-     printStats();
-   }
- }
+      clientProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
+          false);
+      // int generatedFileIdx = 0;
+      LOG.info("Generate " + numOpsRequired + " intputs for " + getOpName());
+      fileNames = new String[numThreads][];
+      for(int idx=0; idx < numThreads; idx++) {
+        int threadOps = opsPerThread[idx];
+        fileNames[idx] = new String[threadOps];
+        for(int jdx=0; jdx < threadOps; jdx++)
+          fileNames[idx][jdx] = nameGenerator.
+                                  getNextFileName("ThroughputBench");
+      }
+
+      clientProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
+          false);
+    }
+
+    /**
+     * returns client name
+     */
+    @Override
+    String getExecutionArgument(int daemonId) {
+      return getClientName(daemonId);
+    }
+
+    /**
+     * Do file create and increase replication immediately.
+     */
+    @Override
+    long executeOp(int daemonId, int inputIdx, String clientName)
+        throws IOException {
+      long start = Time.now();
+      clientProto.create(fileNames[daemonId][inputIdx],
+          FsPermission.getDefault(), clientName,
+          new EnumSetWritable<CreateFlag>(
+              EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)),
+          true, replication, BLOCK_SIZE, CryptoProtocolVersion.supported());
+      long end = Time.now();
+      ExtendedBlock lastBlock = addBlocks(fileNames[daemonId][inputIdx], clientName);
+      clientProto.complete(fileNames[daemonId][inputIdx], clientName, lastBlock,
+          HdfsConstants.GRANDFATHER_INODE_ID);
+      // change replication
+      clientProto.setReplication(fileNames[daemonId][inputIdx],
+          (short) (replication + 1));
+
+      return end - start;
+    }
+
+    private ExtendedBlock addBlocks(String fileName, String clientName)
+    throws IOException {
+      ExtendedBlock prevBlock = null;
+      for(int jdx = 0; jdx < blocksPerFile; jdx++) {
+        LocatedBlock loc = addBlock(fileName, clientName,
+            prevBlock, null, HdfsConstants.GRANDFATHER_INODE_ID, null);
+        prevBlock = loc.getBlock();
+        for(DatanodeInfo dnInfo : loc.getLocations()) {
+          int dnIdx = dnInfo.getXferPort() - 1;
+          TinyDatanode dn = datanodes[dnIdx];
+          synchronized (dn) {
+            dn.addBlock(loc.getBlock().getLocalBlock());
+            ReceivedDeletedBlockInfo[] rdBlocks = { new ReceivedDeletedBlockInfo(
+                loc.getBlock().getLocalBlock(),
+                ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
+            StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
+                new DatanodeStorage(dn.storage.getStorageID()),
+                rdBlocks) };
+            dataNodeProto.blockReceivedAndDeleted(dn.dnRegistration,
+                bpid, report);
+          }
+        }
+        // IBRs are asynchronously processed by NameNode. The next
+        // ClientProtocol#addBlock() may throw NotReplicatedYetException.
+      }
+      return prevBlock;
+    }
+
+    /**
+     * Retry ClientProtocol.addBlock() if it throws NotReplicatedYetException.
+     * Because addBlock() also commits the previous block,
+     * it fails if enough IBRs are not processed by NameNode.
+     */
+    private LocatedBlock addBlock(String src, String clientName,
+        ExtendedBlock previous, DatanodeInfo[] excludeNodes, long fileId,
+        String[] favoredNodes) throws IOException {
+      for (int i = 0; i < 30; i++) {
+        try {
+          return clientProto.addBlock(src, clientName,
+              previous, excludeNodes, fileId, favoredNodes, null);
+        } catch (NotReplicatedYetException|RemoteException e) {
+          if (e instanceof RemoteException) {
+            String className = ((RemoteException) e).getClassName();
+            if (!className.equals(NotReplicatedYetException.class.getName())) {
+              throw e;
+            }
+          }
+          try {
+            Thread.sleep(100);
+          } catch (InterruptedException ie) {
+            LOG.warn("interrupted while retrying addBlock.", ie);
+          }
+        }
+      }
+      throw new IOException("failed to add block.");
+    }
+
+    @Override
+    void benchmark() throws IOException {
+      super.benchmark();
+
+      // do savemeta
+      long start = Time.monotonicNow();
+      clientProto.metaSave("metasave-" + numOpsRequired + ".txt");
+      long end = Time.monotonicNow();
+      saveMetaTime = end - start;
+    }
+
+    @Override
+    void printResults() {
+      LOG.info("--- " + getOpName() + " inputs ---");
+      LOG.info("nrFiles = " + numOpsRequired);
+      LOG.info("nrThreads = " + numThreads);
+      LOG.info("nrFilesPerDir = " + nameGenerator.getFilesPerDirectory());
+      LOG.info("saveMeta time = " + saveMetaTime);
+      printStats();
+    }
+  }
 
   /**
    * Directory creation statistics.
