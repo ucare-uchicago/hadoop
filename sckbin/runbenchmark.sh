@@ -8,5 +8,10 @@ export HADOOP_CLIENT_OPTS="$HADOOP_CLIENT_OPTS -Xmx65536m -Dhadoop.root.logger=I
 #cd ../hadoop-hdfs-project/hadoop-hdfs
 #mvn test -e -Dtest=TestMetaSave#testMetaSaveWithLargeUnderReplicate
 
-hadoop org.apache.hadoop.hdfs.server.namenode.TestMetaSaveScale 
+# hadoop org.apache.hadoop.hdfs.server.namenode.TestMetaSaveScale 
+hadoop org.apache.hadoop.hdfs.server.namenode.NNThroughputBenchmark -op savemeta \
+  -threads 32 \
+  -files 16777216 \
+  -filesPerDir 131072 \
+  -numDatanode 64
 
