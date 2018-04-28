@@ -672,9 +672,11 @@ public class NNThroughputBenchmark implements Tool {
       assert opsPerThread.length == numThreads : "Error opsPerThread.length";
 
       datanodes = new TinyDatanode[nrDatanodes];
+      int dnCap = numOpsRequired / nrDatanodes * 2;
+
       // create data-nodes
       for(int idx=0; idx < nrDatanodes; idx++) {
-        datanodes[idx] = new TinyDatanode(idx, numOpsRequired);
+        datanodes[idx] = new TinyDatanode(idx, dnCap);
         datanodes[idx].register();
         datanodes[idx].sendHeartbeat();
       }
@@ -797,11 +799,19 @@ public class NNThroughputBenchmark implements Tool {
 
     @Override
     void printResults() {
+      String blockDistribution = "";
+      String delim = "(";
+      for(int idx=0; idx < nrDatanodes; idx++) {
+        blockDistribution += delim + datanodes[idx].nrBlocks;
+        delim = ", ";
+      }
+      blockDistribution += ")";
       LOG.info("--- " + getOpName() + " inputs ---");
       LOG.info("nrFiles = " + numOpsRequired);
       LOG.info("nrThreads = " + numThreads);
       LOG.info("nrFilesPerDir = " + nameGenerator.getFilesPerDirectory());
       LOG.info("saveMeta time = " + saveMetaTime);
+      LOG.info("datanodes = " + nrDatanodes + " " + blockDistribution);
       printStats();
     }
   }
